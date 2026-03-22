@@ -610,6 +610,15 @@ function dealKey(mls,name,addr,town,weekLabel){const m=(mls||'').trim().toUpperC
 const EXCLUDED_AGENTS=['donna mahoney','simon verkaik'];
 function isExcluded(name){return EXCLUDED_AGENTS.includes((name||'').toLowerCase().trim());}
 
+// Strip excluded agents from all historical week data before any rendering touches it
+function sanitizeWeekData(weeks){
+  (weeks||[]).forEach(week=>{
+    Object.keys(week.agents||{}).forEach(k=>{if(isExcluded(week.agents[k].name))delete week.agents[k];});
+    Object.keys(week.weekDeals||{}).forEach(k=>{if(isExcluded(week.weekDeals[k].name))delete week.weekDeals[k];});
+    if(week.buyerRows)week.buyerRows=week.buyerRows.filter(r=>!isExcluded(r.name));
+  });
+}
+
 function parseTransactions(tsv,weekLabel){
   const rows=parseTSV(tsv);const agents={};const deals=[];const weekDeals={};
   rows.forEach(r=>{
@@ -1182,6 +1191,7 @@ function showTab(id,el,color,afterRender){
 (function init(){
   function applyData(data){
     _ytdData=data;
+    sanitizeWeekData(_ytdData.weeks);
     var weeks=_ytdData.weeks||[];
     if(!weeks.length) return;
     // Sort chronologically
