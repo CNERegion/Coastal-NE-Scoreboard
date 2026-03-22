@@ -203,9 +203,12 @@
     .standing-row { gap:4px; font-size:12px; }
     .standing-bar-wrap { min-width:50px; }
     .standing-money { min-width:50px; font-size:11px; }
-    .detail-table { font-size:11px; }
-    .detail-table th, .detail-table td { padding:5px 6px; white-space:normal; word-break:break-word; max-width:120px; }
-    .detail-table th:first-child, .detail-table td:first-child { min-width:90px; }
+    .detail-table { font-size:11px; table-layout:fixed; width:100%; }
+    .detail-table th, .detail-table td { padding:5px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:0; }
+    .detail-table th:nth-child(1), .detail-table td:nth-child(1) { width:30%; }
+    .detail-table th:nth-child(2), .detail-table td:nth-child(2) { width:30%; }
+    .detail-table th:nth-child(3), .detail-table td:nth-child(3) { width:20%; }
+    .detail-table th:nth-child(4), .detail-table td:nth-child(4) { width:20%; }
     .ytd-agent-card { padding:10px 12px; }
     #week-nav-bar > div { padding:6px 8px; gap:5px; }
     #week-nav-bar select { font-size:11px; }
