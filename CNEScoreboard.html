@@ -488,11 +488,14 @@ function loadYTD(){return{weeks:_ytdData._publishedWeeks||_ytdData.weeks||[]};}
 // ═══════════════════════════════════════════════════════════════════════════════
 // YTD AGENT BUILDER
 // ═══════════════════════════════════════════════════════════════════════════════
+const EXCLUDED_AGENTS=['donna mahoney','simon verkaik'];
+function isExcluded(name){return EXCLUDED_AGENTS.includes((name||'').toLowerCase().trim());}
 function buildYTDAgents(weeks,filterRegionId){
   const registry={};const agentPts={};const agentMeta={};const agentWeeklyPts={};const agentBuyer={};
   weeks.forEach((week,wi)=>{
     const weekNewPts={};
     Object.entries(week.weekDeals||{}).forEach(([dk,d])=>{
+      if(isExcluded(d.name))return;
       const ak=agentKey(d.name);
       if(!agentMeta[ak])agentMeta[ak]={name:d.name,office:d.office,regionId:getRegionId(d.office)};
       if(!agentPts[ak])agentPts[ak]=0;
@@ -504,6 +507,7 @@ function buildYTDAgents(weeks,filterRegionId){
     });
     Object.values(week.agents||{}).forEach(a=>{
       if(!a.buyer)return;
+      if(isExcluded(a.name))return;
       const ak=agentKey(a.name);
       if(!agentMeta[ak])agentMeta[ak]={name:a.name,office:a.office,regionId:getRegionId(a.office)};
       if(!agentPts[ak])agentPts[ak]=0;

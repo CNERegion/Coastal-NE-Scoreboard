@@ -607,12 +607,16 @@ function fmtPct(n){return n.toFixed(1)+'%';}
 function sideBreakdown(l,b,bo){const p=[];if(l)p.push(`${l} list side`);if(b)p.push(`${b} buy side`);if(bo)p.push(`${bo} both sides`);return p.length?' · '+p.join(' / '):''}
 function dealKey(mls,name,addr,town,weekLabel){const m=(mls||'').trim().toUpperCase();if(m&&m!=='NON-MLS'&&m!=='')return'MLS:'+m;return'NONMLS:'+agentKey(name)+':'+((addr||'').toLowerCase().trim())+':'+((town||'').toLowerCase().trim())+':'+weekLabel;}
 
+const EXCLUDED_AGENTS=['donna mahoney','simon verkaik'];
+function isExcluded(name){return EXCLUDED_AGENTS.includes((name||'').toLowerCase().trim());}
+
 function parseTransactions(tsv,weekLabel){
   const rows=parseTSV(tsv);const agents={};const deals=[];const weekDeals={};
   rows.forEach(r=>{
     const office=r['office']||'';if(!inRegion(office))return;
     const status=(r['status']||'').toUpperCase().trim();const name=(r['agent name']||'').trim();
     if(!name||!status)return;
+    if(isExcluded(name))return;
     const mls=r['mls#']||r['mls']||'';
     const notes=((r['notes']||'')+' '+(r['timestamp']||'')).toLowerCase();
     const isBothSides=notes.includes('both sides');
@@ -657,6 +661,7 @@ function parseBuyers(tsv,agentMap){
   rows.forEach(r=>{
     const office=r['office']||'';if(!inRegion(office))return;
     const name=(r['agent name']||'').trim();if(!name)return;
+    if(isExcluded(name))return;
     const key=agentKey(name);const regionId=getRegionId(office);
     if(!agentMap[key])agentMap[key]={name,office,regionId,closed:0,closedList:0,closedBuy:0,closedBoth:0,pend:0,pendList:0,pendBuy:0,pendBoth:0,newL:0,buyer:0,buyerAgency:0,showing:0,facilitator:0,withdrawn:0};
     agentMap[key].buyer+=1;
