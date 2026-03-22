@@ -94,6 +94,7 @@
   .detail-filter-pill:hover { filter:brightness(1.1); }
   .detail-filter-pill.active { border:2px solid #fff; box-shadow:0 0 0 2px rgba(0,0,0,0.15); }
   .detail-banner-body { padding:16px; display:none; }
+  .detail-banner-hdr { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:10px 10px 0 0; cursor:pointer; user-select:none; gap:8px; }
   .mobile-scroll-pill { display:none; }
   .scroll-fade-overlay { display:none; }
   .detail-banner-body.open { display:block; }
@@ -181,8 +182,10 @@
     .detail-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
   
     .detail-table-wrap { position:relative; }
-    .detail-table-wrap::after { content:''; position:absolute; right:0; top:0; bottom:0; width:28px; background:linear-gradient(to right, transparent, rgba(255,255,255,0.85)); pointer-events:none; border-radius:0 0 6px 0; }
-    .detail-banner-hdr[data-scroll-hint]::after { content:'\2190 scroll \2192'; font-size:9px; font-weight:500; opacity:0.85; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:10px; margin-left:8px; }
+    .detail-table-wrap::after { content:''; position:absolute; right:0; top:0; bottom:0; width:30px; background:linear-gradient(to right, transparent, rgba(255,255,255,0.9)); pointer-events:none; }
+    .detail-banner-hdr { flex-wrap:wrap; }
+    .detail-banner-hdr .hdr-title { flex:1; }
+    .detail-banner-hdr .hdr-meta { white-space:nowrap; }
   }
 
   /* ── MOBILE ────────────────────────────────────────────────────────────── */
