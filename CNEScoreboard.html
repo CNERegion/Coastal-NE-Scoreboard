@@ -775,14 +775,14 @@ function renderYTDAgentLeaderboard(containerId,ytdAgents,weeks){
         <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">
           <div class="ytd-rank">${i<3?medals[i]:i+1}</div>
           <div class="agent-init" style="background:${c.bg};color:${c.color};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500">${initials(a.name)}</div>
-          <div style="display:flex;gap:2px;flex-direction:column;align-items:center;max-width:36px">${breakdown.replace(/style="/g,'style="font-size:9px;padding:1px 4px;')}</div>
+          <div style="display:flex;gap:2px;flex-direction:column;align-items:flex-start;margin-top:4px">${breakdown.replace(/class="pill /g,'class="pill-sm ').replace(/style="[^"]*"/g,'style="font-size:9px;padding:1px 5px;border-radius:8px;white-space:nowrap"')}</div>
         </div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;justify-content:space-between;align-items:baseline">
             <div><div class="ytd-name">${a.name}</div><div style="font-size:11px;color:#aaa9a2">${a.office||''}</div></div>
             <div class="ytd-pts" style="color:#1D9E75;flex-shrink:0;margin-left:8px">${a.points} pts</div>
           </div>
-          <div style="display:flex;justify-content:flex-end;align-items:center;margin-top:6px">
+          <div style="display:flex;justify-content:flex-end;align-items:center;margin-top:4px">
             ${ytdTotalVal?`<div style="font-size:12px;font-weight:700;color:#1a1a18;white-space:nowrap;flex-shrink:0;margin-left:8px">${fmtMoney(ytdTotalVal)}</div>`:''}
           </div>
         </div>
