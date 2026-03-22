@@ -441,6 +441,7 @@ function showConfigNotice(){_ytdData=PRELOADED_DATA;initDisplay();return;
 // INIT — decide what to show based on publish gate
 // ═══════════════════════════════════════════════════════════════════════════════
 function initDisplay(){
+  sanitizeWeekData(_ytdData.weeks);
   const allWeeks=_ytdData.weeks||[];
   const published=getPublishedWeeks(allWeeks);
 
@@ -490,6 +491,16 @@ function loadYTD(){return{weeks:_ytdData._publishedWeeks||_ytdData.weeks||[]};}
 // ═══════════════════════════════════════════════════════════════════════════════
 const EXCLUDED_AGENTS=['donna mahoney','simon verkaik'];
 function isExcluded(name){return EXCLUDED_AGENTS.includes((name||'').toLowerCase().trim());}
+
+// Strip excluded agents from all week data at startup before any rendering touches it
+function sanitizeWeekData(weeks){
+  (weeks||[]).forEach(week=>{
+    Object.keys(week.agents||{}).forEach(k=>{if(isExcluded(week.agents[k].name))delete week.agents[k];});
+    Object.keys(week.weekDeals||{}).forEach(k=>{if(isExcluded(week.weekDeals[k].name))delete week.weekDeals[k];});
+    if(week.buyerRows)week.buyerRows=week.buyerRows.filter(r=>!isExcluded(r.name));
+  });
+}
+
 function buildYTDAgents(weeks,filterRegionId){
   const registry={};const agentPts={};const agentMeta={};const agentWeeklyPts={};const agentBuyer={};
   weeks.forEach((week,wi)=>{
