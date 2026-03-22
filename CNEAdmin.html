@@ -255,8 +255,14 @@
     .standing-row { gap:4px; font-size:12px; }
     .standing-bar-wrap { min-width:50px; }
     .standing-money { min-width:50px; font-size:11px; }
-    .detail-table { font-size:11px; white-space:nowrap; min-width:560px; }
-    .detail-table th, .detail-table td { padding:5px 6px; }
+    .detail-table { font-size:11px; white-space:nowrap; border-collapse:collapse; }
+    .detail-table th, .detail-table td { padding:5px 10px; }
+    .detail-table th:nth-child(1), .detail-table td:nth-child(1) { min-width:140px; }
+    .detail-table th:nth-child(2), .detail-table td:nth-child(2) { min-width:200px; }
+    .detail-table th:nth-child(3), .detail-table td:nth-child(3) { min-width:140px; }
+    .detail-table th:nth-child(4), .detail-table td:nth-child(4) { min-width:90px; }
+    .detail-table th:nth-child(5), .detail-table td:nth-child(5) { min-width:90px; }
+    .detail-table th:nth-child(6), .detail-table td:nth-child(6) { min-width:70px; }
     .ytd-agent-card { padding:10px 12px; }
     #week-nav-bar > div { padding:6px 8px; gap:5px; }
     #week-nav-bar select { font-size:11px; }
