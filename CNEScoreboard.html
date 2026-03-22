@@ -772,18 +772,19 @@ function renderYTDAgentLeaderboard(containerId,ytdAgents,weeks){
     const weekLabels=weeks.map(w=>{const m=w.label.match(/\d+/);const num=m?parseInt(m[0]):0;return`<div class="spark-week-label">w${num<10?'0'+num:num}</div>`;}).join('');
     row.innerHTML=`
       <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;width:40px">
           <div class="ytd-rank">${i<3?medals[i]:i+1}</div>
           <div class="agent-init" style="background:${c.bg};color:${c.color};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500">${initials(a.name)}</div>
-          <div style="display:flex;gap:2px;flex-direction:column;align-items:flex-start;margin-top:4px">${breakdown.replace(/class="pill /g,'class="pill-sm ').replace(/style="[^"]*"/g,'style="font-size:9px;padding:1px 5px;border-radius:8px;white-space:nowrap"')}</div>
+          <div style="display:flex;flex-direction:row;flex-wrap:wrap;gap:2px;align-items:flex-start;width:100%">${breakdown}</div>
         </div>
         <div style="flex:1;min-width:0">
-          <div style="display:flex;justify-content:space-between;align-items:baseline">
-            <div><div class="ytd-name">${a.name}</div><div style="font-size:11px;color:#aaa9a2">${a.office||''}</div></div>
-            <div class="ytd-pts" style="color:#1D9E75;flex-shrink:0;margin-left:8px">${a.points} pts</div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:4px">
+            <div class="ytd-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.name}</div>
+            <div class="ytd-pts" style="color:#1D9E75;flex-shrink:0">${a.points} pts</div>
           </div>
-          <div style="display:flex;justify-content:flex-end;align-items:center;margin-top:4px">
-            ${ytdTotalVal?`<div style="font-size:12px;font-weight:700;color:#1a1a18;white-space:nowrap;flex-shrink:0;margin-left:8px">${fmtMoney(ytdTotalVal)}</div>`:''}
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px">
+            <div style="font-size:11px;color:#aaa9a2">${a.office||''}</div>
+            ${ytdTotalVal?`<div style="font-size:12px;font-weight:700;color:#1a1a18;white-space:nowrap;flex-shrink:0">${fmtMoney(ytdTotalVal)}</div>`:''}
           </div>
         </div>
       </div>
