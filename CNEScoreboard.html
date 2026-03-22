@@ -94,6 +94,8 @@
   .detail-filter-pill:hover { filter:brightness(1.1); }
   .detail-filter-pill.active { border:2px solid #fff; box-shadow:0 0 0 2px rgba(0,0,0,0.15); }
   .detail-banner-body { padding:16px; display:none; }
+  .mobile-scroll-pill { display:none; }
+  .scroll-fade-overlay { display:none; }
   .detail-banner-body.open { display:block; }
   .detail-table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; border: 1px solid #e2e0d8; border-radius: 0 0 10px 10px; overflow: hidden; }
   .detail-table th { padding: 8px 10px; text-align: left; font-size: 11px; font-weight: 500; color: #888780; border-bottom: 1px solid #e2e0d8; background: #fafaf8; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -177,6 +179,10 @@
 
     /* Overflow tables scroll horizontally */
     .detail-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  
+    .detail-table-wrap { position:relative; }
+    .detail-table-wrap::after { content:''; position:absolute; right:0; top:0; bottom:0; width:28px; background:linear-gradient(to right, transparent, rgba(255,255,255,0.85)); pointer-events:none; border-radius:0 0 6px 0; }
+    .detail-banner-hdr[data-scroll-hint]::after { content:'\2190 scroll \2192'; font-size:9px; font-weight:500; opacity:0.85; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:10px; margin-left:8px; }
   }
 
   /* ── MOBILE ────────────────────────────────────────────────────────────── */
@@ -571,7 +577,8 @@ function renderBuyerTable(buyerRows,appendTo){
   hdr.style.cssText='font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#fff;background:#534AB7;padding:5px 10px;border-radius:6px 6px 0 0';
   hdr.textContent=`Buyers (${buyerRows.reduce((s,r)=>s+(r.buyer||1),0)})`;
   wrap.appendChild(hdr);
-  const tblWrap=document.createElement('div');tblWrap.style.cssText='overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%';
+  const tblWrap=document.createElement('div');tblWrap.style.cssText='overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;position:relative';
+  const fadeEl=document.createElement('div');fadeEl.className='scroll-fade-overlay';fadeEl.style.cssText='position:absolute;right:0;top:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,rgba(255,255,255,0.85));pointer-events:none;z-index:1';tblWrap.appendChild(fadeEl);tblWrap.addEventListener('scroll',function(){if(this.scrollLeft>10)fadeEl.style.display='none';});
   const tbl=document.createElement('table');tbl.className='detail-table';
   tbl.innerHTML='<thead><tr><th>Agent</th><th>Type</th><th>#</th></tr></thead>';
   const tbody=document.createElement('tbody');
@@ -614,9 +621,10 @@ function renderDealSection(key,sect,appendTo){
   else if(key==='NEW')rightHtml=`<span style="font-size:14px;font-weight:500;color:#fff;white-space:nowrap">LISTING $ ${fmtMoney(totalListAmt)}</span>`;
   else if(key==='PEND')rightHtml=`<span style="font-size:14px;font-weight:500;color:#fff;white-space:nowrap">PIPELINE $ ${fmtMoney(totalListAmt)}</span>`;
   hdr.setAttribute('data-section', key);
-  hdr.innerHTML=`<span style="font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#fff;white-space:nowrap">${sect.label} (${sect.deals.length})</span>${rightHtml}`;
+  hdr.innerHTML=`<span style="font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#fff;white-space:nowrap">${sect.label} (${sect.deals.length}) <span class="mobile-scroll-pill" style="font-size:9px;font-weight:500;background:rgba(255,255,255,0.2);padding:2px 7px;border-radius:10px;white-space:nowrap">← scroll →</span></span>${rightHtml}`;
   wrap.appendChild(hdr);
-  const tblWrap=document.createElement('div');tblWrap.style.cssText='overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%';
+  const tblWrap=document.createElement('div');tblWrap.style.cssText='overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;position:relative';
+  const fadeEl=document.createElement('div');fadeEl.className='scroll-fade-overlay';fadeEl.style.cssText='position:absolute;right:0;top:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,rgba(255,255,255,0.85));pointer-events:none;z-index:1';tblWrap.appendChild(fadeEl);tblWrap.addEventListener('scroll',function(){if(this.scrollLeft>10)fadeEl.style.display='none';});
   const tbl=document.createElement('table');tbl.className='detail-table';
   tbl.innerHTML=`<thead><tr><th>Agent</th><th>Address</th><th>Town</th><th>MLS #</th><th>List $</th>${isClosed?'<th>Sold $</th>':''}<th>Side</th></tr></thead>`;
   const tbody=document.createElement('tbody');

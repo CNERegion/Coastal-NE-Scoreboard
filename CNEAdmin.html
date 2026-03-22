@@ -156,6 +156,8 @@
   .detail-filter-pill:hover { filter:brightness(1.1); }
   .detail-filter-pill.active { border:2px solid #fff; box-shadow:0 0 0 2px rgba(0,0,0,0.15); }
   .detail-banner-body { padding:16px; display:none; }
+  .mobile-scroll-pill { display:none; }
+  .scroll-fade-overlay { display:none; }
   .detail-banner-body.open { display:block; }
   .detail-table { width:100%; border-collapse:collapse; font-size:12px; background:#fff; border:1px solid #e2e0d8; border-radius:0 0 10px 10px; overflow:hidden; }
   .detail-table th { padding:8px 10px; text-align:left; font-size:11px; font-weight:500; color:#888780; border-bottom:1px solid #e2e0d8; background:#fafaf8; white-space:nowrap; text-transform:uppercase; letter-spacing:0.5px; }
@@ -229,6 +231,10 @@
 
     /* Overflow tables scroll horizontally */
     .detail-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  
+    .detail-table-wrap { position:relative; }
+    .detail-table-wrap::after { content:''; position:absolute; right:0; top:0; bottom:0; width:28px; background:linear-gradient(to right, transparent, rgba(255,255,255,0.85)); pointer-events:none; border-radius:0 0 6px 0; }
+    .detail-banner-hdr[data-scroll-hint]::after { content:'\2190 scroll \2192'; font-size:9px; font-weight:500; opacity:0.85; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:10px; margin-left:8px; }
   }
 
   /* ── MOBILE ────────────────────────────────────────────────────────────── */
@@ -770,7 +776,8 @@ function renderBuyerTable(buyerRows,appendTo){
   if(!buyerRows.length)return;const wrap=document.createElement('div');wrap.style.marginBottom='14px';
   const hdr=document.createElement('div');hdr.setAttribute('data-section','BUYER');hdr.style.cssText='font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#fff;background:#534AB7;padding:5px 10px;border-radius:6px 6px 0 0';
   hdr.textContent=`Buyers (${buyerRows.reduce((s,r)=>s+(r.buyer||1),0)})`;wrap.appendChild(hdr);
-  const tblWrap=document.createElement('div');tblWrap.style.cssText='overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%';
+  const tblWrap=document.createElement('div');tblWrap.style.cssText='overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;position:relative';
+  const fadeEl=document.createElement('div');fadeEl.className='scroll-fade-overlay';fadeEl.style.cssText='position:absolute;right:0;top:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,rgba(255,255,255,0.85));pointer-events:none;z-index:1';tblWrap.appendChild(fadeEl);tblWrap.addEventListener('scroll',function(){if(this.scrollLeft>10)fadeEl.style.display='none';});
   const tbl=document.createElement('table');tbl.className='detail-table';tbl.innerHTML='<thead><tr><th>Agent</th><th>Type</th><th>#</th></tr></thead>';
   const tbody=document.createElement('tbody');
   const brByAgent={};(window._currentBuyerRows||[]).forEach(br=>{const ak=agentKey(br.name);if(!brByAgent[ak])brByAgent[ak]={agency:0,showing:0,facilitator:0};if(br.typeLabel==='agency')brByAgent[ak].agency++;else if(br.typeLabel==='showing')brByAgent[ak].showing++;else if(br.typeLabel==='facilitator')brByAgent[ak].facilitator++;});
@@ -786,8 +793,9 @@ function renderDealSection(key,sect,appendTo){
   let rh='';if(isClosed){const p=tL>0?((tS/tL)*100).toFixed(1)+'%':'—';rh=`<span style="font-size:14px;font-weight:500;color:#fff;white-space:nowrap">LIST $ ${fmtMoney(tL)}&nbsp;&nbsp;·&nbsp;&nbsp;LIST-TO-SOLD ${p}&nbsp;&nbsp;·&nbsp;&nbsp;SOLD $ ${fmtMoney(tS)}</span>`;}
   else if(key==='NEW')rh=`<span style="font-size:14px;font-weight:500;color:#fff;white-space:nowrap">LISTING $ ${fmtMoney(tL)}</span>`;
   else if(key==='PEND')rh=`<span style="font-size:14px;font-weight:500;color:#fff;white-space:nowrap">PIPELINE $ ${fmtMoney(tL)}</span>`;
-  hdr.setAttribute('data-section',key);hdr.innerHTML=`<span style="font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#fff;white-space:nowrap">${sect.label} (${sect.deals.length})</span>${rh}`;wrap.appendChild(hdr);
-  const tblWrap=document.createElement('div');tblWrap.style.cssText='overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%';
+  hdr.setAttribute('data-section',key);hdr.innerHTML=`<span style="font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#fff;white-space:nowrap">${sect.label} (${sect.deals.length}) <span class="mobile-scroll-pill" style="font-size:9px;font-weight:500;background:rgba(255,255,255,0.2);padding:2px 7px;border-radius:10px;white-space:nowrap">← scroll →</span></span>${rh}`;wrap.appendChild(hdr);
+  const tblWrap=document.createElement('div');tblWrap.style.cssText='overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;position:relative';
+  const fadeEl=document.createElement('div');fadeEl.className='scroll-fade-overlay';fadeEl.style.cssText='position:absolute;right:0;top:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,rgba(255,255,255,0.85));pointer-events:none;z-index:1';tblWrap.appendChild(fadeEl);tblWrap.addEventListener('scroll',function(){if(this.scrollLeft>10)fadeEl.style.display='none';});
   const tbl=document.createElement('table');tbl.className='detail-table';tbl.innerHTML=`<thead><tr><th>Agent</th><th>Address</th><th>Town</th><th>MLS #</th><th>List $</th>${isClosed?'<th>Sold $</th>':''}<th>Side</th></tr></thead>`;
   const tbody=document.createElement('tbody');
   sect.deals.sort((a,b)=>a.name.localeCompare(b.name)).forEach(d=>{const url=veraniUrl(d);const mlsCell=url?`<a href="${url}" target="_blank" style="color:#185FA5;font-weight:500;text-decoration:none;font-size:11px">${d.mls} ↗</a>`:`<span style="color:#aaa9a2;font-size:11px">${d.mls||'—'}</span>`;const tr=document.createElement('tr');tr.innerHTML=`<td><div class="detail-agent">${d.name}</div></td><td class="detail-address">${d.addr||'—'}</td><td style="font-size:12px">${d.town||'—'}</td><td>${mlsCell}</td><td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}<td>${sidePill(d.notes)}</td>`;tbody.appendChild(tr);});
