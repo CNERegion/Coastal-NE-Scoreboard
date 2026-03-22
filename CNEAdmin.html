@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coastal NE Region — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: #f5f4f0; color: #1a1a18; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .page { max-width: 740px; margin: 0 auto; }
+  .header { text-align: center; padding: 2.5rem 1rem 2rem; background: #fff; border-radius: 16px; border: 1px solid #e2e0d8; margin-bottom: 1.25rem; }
+  .brand { font-family: 'Playfair Display', Georgia, serif; font-size: 32px; font-weight: 700; letter-spacing: -0.5px; color: #1a1a18; }
+  .brand span { color: #1D9E75; }
+  .tagline { font-size: 12px; color: #888780; letter-spacing: 3px; text-transform: uppercase; margin-top: 6px; }
+  .week-label { font-size: 13px; color: #aaa9a2; margin-top: 6px; }
+  .admin-badge { display:inline-block; background:#FAEEDA; color:#854F0B; font-size:11px; font-weight:500; padding:3px 10px; border-radius:20px; margin-top:8px; }
+
+  /* ── DRIVE CONFIG PANEL ── */
+  .drive-config { background:#fff; border-radius:14px; border:2px solid #1D9E75; padding:20px; margin-bottom:1.25rem; }
+  .drive-config-title { font-size:14px; font-weight:500; color:#1a1a18; margin-bottom:4px; display:flex; align-items:center; gap:8px; }
+  .drive-config-sub { font-size:12px; color:#888780; margin-bottom:14px; line-height:1.6; }
+  .drive-input-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  .drive-input-row label { font-size:12px; font-weight:500; color:#5F5E5A; min-width:110px; flex-shrink:0; }
+  .drive-input-row input { flex:1; padding:8px 12px; border:1px solid #d3d1c7; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:13px; color:#1a1a18; background:#fafaf8; }
+  .drive-input-row input:focus { outline:none; border-color:#1D9E75; }
+  .drive-status { font-size:12px; margin-top:6px; min-height:18px; padding:4px 0; }
+  .drive-status.ok { color:#1D9E75; }
+  .drive-status.err { color:#A32D2D; }
+  .drive-status.info { color:#185FA5; }
+
+  /* ── PUBLISH STATUS BAR ── */
+  .publish-status { border-radius:12px; padding:12px 16px; margin-bottom:1.25rem; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .publish-status.pending { background:#FAEEDA; border:1px solid #F5D49A; }
+  .publish-status.live    { background:#E1F5EE; border:1px solid #9FE1CB; }
+  .publish-status.none   { background:#f0efe8; border:1px solid #d3d1c7; }
+  .publish-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .publish-dot.pending { background:#BA7517; }
+  .publish-dot.live    { background:#1D9E75; }
+  .publish-dot.none   { background:#aaa9a2; }
+  .publish-text { flex:1; min-width:160px; }
+  .publish-label { font-size:13px; font-weight:500; }
+  .publish-sub   { font-size:11px; margin-top:2px; opacity:0.75; }
+  .publish-actions { display:flex; gap:6px; flex-wrap:wrap; }
+
+  /* ── PASTE SECTION ── */
+  .paste-section { background:#fff; border-radius:14px; border:1px solid #e2e0d8; padding:20px; margin-bottom:1.25rem; }
+  .paste-title { font-size:14px; font-weight:500; margin-bottom:6px; }
+  .paste-sub { font-size:12px; color:#888780; margin-bottom:12px; line-height:1.5; }
+  .paste-row { display:flex; gap:8px; margin-bottom:8px; align-items:flex-start; }
+  .paste-label { font-size:12px; font-weight:500; color:#5F5E5A; min-width:120px; padding-top:8px; flex-shrink:0; }
+  textarea { flex:1; height:80px; padding:8px 10px; border:1px solid #d3d1c7; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:12px; color:#1a1a18; background:#fafaf8; resize:vertical; }
+  textarea:focus { outline:none; border-color:#1D9E75; }
+  .week-input-row { display:flex; gap:8px; margin-bottom:12px; align-items:center; }
+  .week-input-row input { flex:1; padding:8px 12px; border:1px solid #d3d1c7; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:13px; color:#1a1a18; background:#fafaf8; }
+  .week-input-row input:focus { outline:none; border-color:#1D9E75; }
+  .week-input-row label { font-size:12px; font-weight:500; color:#5F5E5A; min-width:120px; flex-shrink:0; }
+  .btn-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .btn { padding:9px 20px; border-radius:24px; font-size:13px; font-weight:500; border:none; cursor:pointer; font-family:'DM Sans',sans-serif; transition:opacity 0.15s; }
+  .btn:hover { opacity:0.85; }
+  .btn-primary   { background:#1D9E75; color:#fff; }
+  .btn-preview   { background:#534AB7; color:#fff; }
+  .btn-publish   { background:#BA7517; color:#fff; }
+  .btn-secondary { background:#f0efe8; color:#5F5E5A; border:1px solid #d3d1c7; }
+  .btn-danger    { background:#FCEBEB; color:#A32D2D; border:1px solid #F7C1C1; }
+  .status-msg { font-size:12px; color:#1D9E75; margin-top:8px; min-height:18px; }
+
+  /* ── PREVIEW MODE BANNER ── */
+  .preview-banner { background:#EEEDFE; border:1px solid #CECBF6; border-radius:12px; padding:10px 16px; margin-bottom:1.25rem; display:none; align-items:center; gap:10px; flex-wrap:wrap; }
+  .preview-banner.active { display:flex; }
+  .preview-label { font-size:13px; font-weight:500; color:#534AB7; flex:1; }
+  .preview-close { font-size:12px; color:#534AB7; cursor:pointer; text-decoration:underline; white-space:nowrap; }
+
+  /* ── WEEKS LOADED BOX ── */
+  .ytd-weeks-box { background:#fff; border-radius:14px; border:1px solid #e2e0d8; padding:16px; margin-bottom:1.25rem; }
+  .ytd-week-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f0efe8; font-size:13px; }
+  .ytd-week-row:last-child { border-bottom:none; }
+
+  /* ── VIEWER (same as public) ── */
+  .stats-bar   { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:8px; }
+  .stats-bar-2 { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:1.25rem; }
+  .stat-card { background:#fff; border-radius:12px; border:1px solid #e2e0d8; padding:12px 8px; text-align:center; }
+  .stat-num { font-size:20px; font-weight:700; }
+  .stat-num.green  { color:#1D9E75; }
+  .stat-num.blue   { color:#185FA5; }
+  .stat-num.purple { color:#534AB7; }
+  .stat-num.teal   { color:#0F6E56; }
+  .stat-label { font-size:10px; color:#888780; margin-top:3px; text-transform:uppercase; letter-spacing:0.5px; }
+  .tabs { display:flex; gap:6px; margin-bottom:1.25rem; flex-wrap:wrap; }
+  .tab { padding:7px 16px; border-radius:24px; font-size:13px; font-weight:500; border:2px solid transparent; cursor:pointer; transition:all 0.15s; font-family:'DM Sans',sans-serif; }
+  .tab:hover { filter:brightness(1.1); }
+  .tab.active { border:2px solid #fff; box-shadow:0 0 0 2px rgba(0,0,0,0.2); }
+  .section { display:none; }
+  .section.active { display:block; }
+  .region-header { border-radius:12px; margin-bottom:10px; overflow:hidden; }
+  .region-header-top { display:flex; align-items:center; gap:12px; padding:12px 16px; flex-wrap:wrap; }
+  .region-name { font-size:16px; font-weight:500; flex:1; }
+  .region-offices { font-size:11px; opacity:0.7; margin-top:2px; }
+  .region-totals { display:flex; gap:6px; flex-wrap:wrap; }
+  .region-pill { font-size:11px; font-weight:500; padding:3px 10px; border-radius:20px; }
+  .region-money { display:flex; gap:16px; padding:8px 16px 12px; flex-wrap:wrap; align-items:center; }
+  .money-item { display:flex; flex-direction:column; gap:2px; }
+  .money-label { font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; opacity:0.65; }
+  .money-value { font-size:14px; font-weight:700; }
+  .money-pct { font-size:13px; font-weight:900; color:#1a1a18 !important; }
+  .above-ask-badge { font-size:12px; font-weight:500; padding:3px 10px; border-radius:20px; }
+  .agent-row { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:10px; border:1px solid #e2e0d8; margin-bottom:6px; background:#fff; transition:background 0.1s; flex-wrap:wrap; }
+  .agent-row:hover { background:#f5f4f0; }
+  .rank-num { font-size:12px; font-weight:500; color:#aaa9a2; min-width:20px; text-align:center; }
+  .agent-init { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:500; flex-shrink:0; }
+  .agent-name { font-size:14px; font-weight:500; }
+  .pill { font-size:11px; font-weight:500; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+  .pill-closed    { background:#E1F5EE; color:#0F6E56; }
+  .pill-pend      { background:#FBEAF0; color:#993556; }
+  .pill-new       { background:#E6F1FB; color:#185FA5; }
+  .pill-buyer     { background:#EEEDFE; color:#534AB7; }
+  .pill-zero      { background:#f0efe8; color:#aaa9a2; font-style:italic; }
+  .pill-withdrawn { background:#f0efe8; color:#888780; }
+  .no-board-lbl { font-size:11px; color:#aaa9a2; padding:10px 2px 5px; text-transform:uppercase; letter-spacing:1px; }
+  .summary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:1.25rem; }
+  .summary-card { border-radius:14px; padding:16px; border:1px solid #e2e0d8; cursor:pointer; transition:transform 0.1s, box-shadow 0.1s; }
+  .summary-card:hover { transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,0.06); }
+  .summary-region { font-size:15px; font-weight:500; margin-bottom:4px; }
+  .summary-offices { font-size:11px; margin-bottom:12px; opacity:0.65; }
+  .summary-stat { display:flex; justify-content:space-between; font-size:12px; padding:4px 0; border-bottom:1px solid rgba(0,0,0,0.06); }
+  .summary-stat:last-of-type { border-bottom:none; }
+  .summary-total { display:flex; justify-content:space-between; font-size:15px; font-weight:700; margin-top:10px; padding-top:10px; border-top:1px solid rgba(0,0,0,0.1); }
+  .standings { background:#fff; border-radius:14px; border:1px solid #e2e0d8; padding:16px; margin-bottom:1.25rem; }
+  .standings-title { font-size:12px; font-weight:500; color:#888780; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
+  .standing-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #f0efe8; }
+  .standing-row:last-child { border-bottom:none; }
+  .standing-rank { font-size:13px; font-weight:500; color:#aaa9a2; min-width:20px; }
+  .standing-name { font-size:14px; font-weight:500; flex:1; }
+  .standing-bar-wrap { width:100px; height:6px; background:#f0efe8; border-radius:3px; overflow:hidden; }
+  .standing-bar { height:100%; border-radius:3px; }
+  .standing-pts { font-size:13px; font-weight:700; min-width:44px; text-align:right; }
+  .standing-money { font-size:12px; color:#888780; min-width:70px; text-align:right; }
+  .leader-banner { border-radius:12px; padding:14px 18px; margin-bottom:1.25rem; font-size:13px; line-height:1.6; border:1px solid #9FE1CB; background:#E1F5EE; color:#0F6E56; }
+  .scoring-note { font-size:11px; color:#aaa9a2; text-align:center; padding:1rem 0 0; }
+  .ytd-agent-row { background:#fff; border:1px solid #e2e0d8; border-radius:12px; padding:12px 14px; margin-bottom:8px; }
+  .ytd-name { font-size:15px; font-weight:500; flex:1; }
+  .ytd-pts { font-size:18px; font-weight:700; }
+  .ytd-conv { display:flex; gap:8px; flex-wrap:wrap; padding-left:34px; margin-bottom:6px; }
+  .ytd-sparkline { padding-left:34px; display:flex; align-items:flex-end; gap:3px; height:28px; }
+  .spark-bar { border-radius:2px 2px 0 0; min-width:6px; flex:1; max-width:18px; }
+  .spark-zero { border-radius:2px; background:#f0efe8; }
+  .ytd-weeks-label { display:flex; gap:3px; padding-left:34px; margin-top:3px; }
+  .spark-week-label { font-size:9px; color:#aaa9a2; flex:1; max-width:18px; text-align:center; overflow:hidden; white-space:nowrap; }
+  .ytd-section-title { font-size:14px; font-weight:500; color:#1a1a18; margin:1.5rem 0 0.75rem; padding-bottom:6px; border-bottom:1px solid #e2e0d8; }
+  .empty-state { text-align:center; padding:3rem 1rem; color:#aaa9a2; font-size:14px; }
+  .detail-banner { background:#fff; border-radius:14px; border:1px solid #e2e0d8; margin-top:1.25rem; overflow:hidden; }
+  .detail-banner-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #e2e0d8; flex-wrap:wrap; gap:8px; }
+  .detail-banner-title { font-size:13px; font-weight:500; color:#1a1a18; }
+  .detail-filter-pills { display:flex; gap:6px; flex-wrap:wrap; }
+  .detail-filter-pill { font-size:12px; font-weight:500; padding:4px 14px; border-radius:20px; border:2px solid transparent; cursor:pointer; transition:all .15s; font-family:'DM Sans',sans-serif; }
+  .detail-filter-pill:hover { filter:brightness(1.1); }
+  .detail-filter-pill.active { border:2px solid #fff; box-shadow:0 0 0 2px rgba(0,0,0,0.15); }
+  .detail-banner-body { padding:16px; display:none; }
+  .detail-banner-body.open { display:block; }
+  .detail-table { width:100%; border-collapse:collapse; font-size:12px; background:#fff; border:1px solid #e2e0d8; border-radius:0 0 10px 10px; overflow:hidden; }
+  .detail-table th { padding:8px 10px; text-align:left; font-size:11px; font-weight:500; color:#888780; border-bottom:1px solid #e2e0d8; background:#fafaf8; white-space:nowrap; text-transform:uppercase; letter-spacing:0.5px; }
+  .detail-table td { padding:8px 10px; border-bottom:1px solid #f0efe8; color:#1a1a18; vertical-align:top; font-size:12px; }
+  .detail-table tr:last-child td { border-bottom:none; }
+  .detail-table tr:hover td { background:#fafaf8; }
+  .detail-agent { font-weight:500; }
+  .detail-address { color:#5F5E5A; }
+
+  @media (max-width:520px) {
+    .stats-bar,.stats-bar-2 { grid-template-columns:repeat(2,1fr); }
+    .summary-grid { grid-template-columns:1fr; }
+    .btn-row { gap:6px; }
+    .paste-label { min-width:80px; }
+  }
+
+  /* ── MOBILE LAYOUT ─────────────────────────────────────────────────────── */
+  @media (max-width:600px) {
+    .page { padding:10px; }
+
+    /* Header */
+    .brand { font-size:28px; }
+    .tagline { font-size:10px; letter-spacing:2px; }
+    .week-label { font-size:11px; }
+
+    /* Stats bar */
+    .stats-bar, .stats-bar-2 { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .stat-card { padding:10px 8px; }
+    .stat-num { font-size:22px; }
+    .stat-label { font-size:9px; }
+
+    /* Tabs */
+    .tabs { gap:4px; flex-wrap:wrap; justify-content:center; }
+    .tab { padding:6px 10px; font-size:11px; border-radius:20px; }
+
+    /* Week nav */
+    #week-nav-bar { padding:0; }
+    #week-nav-bar > div { padding:6px 10px; gap:6px; }
+
+    /* Summary grid - stack vertically */
+    .summary-grid { grid-template-columns:1fr; gap:10px; }
+    .summary-card { padding:14px; }
+    .summary-region { font-size:16px; }
+
+    /* Region header */
+    .region-header-top { flex-direction:column; align-items:flex-start; gap:8px; }
+    .region-totals { flex-wrap:wrap; gap:4px; }
+    .region-money { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .money-item { padding:6px; }
+    .money-label { font-size:10px; }
+    .money-value { font-size:13px; }
+
+    /* Detail table - make it scrollable */
+    .detail-table { font-size:11px; }
+    .detail-table th, .detail-table td { padding:6px 6px; }
+    .detail-address { max-width:100px; word-break:break-word; }
+
+    /* Leader banner */
+    .leader-banner { font-size:13px; padding:10px 14px; }
+
+    /* Standing rows */
+    .standing-row { gap:6px; }
+    .standing-bar-wrap { min-width:60px; }
+    .standing-money { min-width:55px; font-size:11px; }
+
+    /* YTD agent cards */
+    .ytd-agent-grid { grid-template-columns:1fr; }
+
+    /* Countdown banner */
+    .publish-countdown { flex-direction:column; gap:4px; text-align:center; font-size:12px; }
+
+    /* Overflow tables scroll horizontally */
+    .detail-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  }
+
+  /* ── MOBILE ────────────────────────────────────────────────────────────── */
+  @media (max-width:600px) {
+    .page { padding:10px; }
+    .brand { font-size:26px; }
+    .tagline { font-size:10px; letter-spacing:1.5px; }
+    .week-label { font-size:11px; }
+    .stats-bar, .stats-bar-2 { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .stat-card { padding:10px 8px; }
+    .stat-num { font-size:22px; }
+    .stat-label { font-size:9px; }
+    .tabs { gap:4px; flex-wrap:wrap; justify-content:center; }
+    .tab { padding:5px 10px; font-size:11px; }
+    .summary-grid { grid-template-columns:1fr; gap:10px; }
+    .summary-card { padding:12px; }
+    .summary-region { font-size:15px; }
+    .region-header-top { flex-direction:column; align-items:flex-start; gap:8px; }
+    .region-totals { flex-wrap:wrap; gap:4px; }
+    .region-money { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .money-label { font-size:10px; }
+    .money-value { font-size:13px; }
+    .leader-banner { font-size:12px; padding:10px 12px; }
+    .standing-row { gap:4px; font-size:12px; }
+    .standing-bar-wrap { min-width:50px; }
+    .standing-money { min-width:50px; font-size:11px; }
+    .detail-table { font-size:11px; display:block; overflow-x:auto; white-space:nowrap; }
+    .detail-table th, .detail-table td { padding:5px 6px; }
+    .ytd-agent-card { padding:10px 12px; }
+    #week-nav-bar > div { padding:6px 8px; gap:5px; }
+    #week-nav-bar select { font-size:11px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="brand">Coastal NE <span>Region</span></div>
+    <div class="tagline">NH &middot; ME &middot; MA</div>
+    <div class="week-label" id="current-week-label">Admin Panel</div>
+    <div class="admin-badge">🔒 Admin Only</div>
+  </div>
+
+  <!-- ── GOOGLE DRIVE CONFIGURATION ── -->
+  <div class="drive-config" id="drive-config-panel">
+    <div class="drive-config-title">☁️ Google Drive Connected</div>
+    <div class="drive-config-sub">
+      Data is saved and loaded via your Google Apps Script Web App. Once hosted on Google Sites, saving will happen automatically. Until then, use <strong>Export Data as JSON</strong> to download your data file and upload it to Google Drive manually.
+    </div>
+    <div class="btn-row" style="margin-top:10px">
+      <button class="btn btn-secondary" onclick="testDriveConnection()">Test Connection</button>
+    </div>
+    <div class="drive-status" id="drive-status"></div>
+  </div>
+
+  <!-- ── PUBLISH STATUS ── -->
+  <div class="publish-status none" id="publish-status-bar">
+    <div class="publish-dot none" id="publish-dot"></div>
+    <div class="publish-text">
+      <div class="publish-label" id="publish-label">No data loaded yet</div>
+      <div class="publish-sub" id="publish-sub">Load a week below to get started</div>
+    </div>
+    <div class="publish-actions" id="publish-actions"></div>
+  </div>
+
+  <!-- ── PREVIEW BANNER ── -->
+  <div class="preview-banner" id="preview-banner">
+    <div class="preview-label">👁 Preview mode — showing pending (unpublished) week</div>
+    <span class="preview-close" onclick="exitPreview()">Exit preview</span>
+  </div>
+
+  <!-- ── DATA ENTRY ── -->
+  <div class="paste-section">
+    <div class="paste-title">Load this week's data</div>
+    <div class="paste-sub">Paste the full unfiltered company report — offices outside your region are filtered automatically. Data is saved to Google Drive as <strong>pending</strong> and will publish automatically on Monday at 5:00 PM ET. You can preview it any time before it goes live.</div>
+    <div class="week-input-row">
+      <label>Week label</label>
+      <input type="text" id="week-label-input" placeholder="e.g. Mar 23–27, 2026">
+    </div>
+    <div class="paste-row">
+      <div class="paste-label">Transactions<br><span style="font-weight:400;color:#aaa9a2">(closings, pending, new)</span></div>
+      <textarea id="transactions-paste" placeholder="Paste your full transactions tab here (headers included)…"></textarea>
+    </div>
+    <div class="paste-row">
+      <div class="paste-label">Buyer agreements<br><span style="font-weight:400;color:#aaa9a2">(all offices, unfiltered)</span></div>
+      <textarea id="buyers-paste" placeholder="Paste your full buyer agreements tab here (headers included)…"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="loadWeek()">💾 Save to Drive (Pending)</button>
+      <button class="btn btn-preview" onclick="previewPending()">👁 Preview Before Publish</button>
+      <button class="btn btn-secondary" onclick="loadSampleData()">Load sample data</button>
+      <button class="btn btn-secondary" onclick="syncAllWeeksToDrive()" style="background:#534AB7;color:#fff;border-color:#534AB7">☁️ Sync All Weeks to Drive</button>
+      <button class="btn btn-secondary" onclick="exportDataAsJSON()" style="background:#0F6E56;color:#fff;border-color:#0F6E56">⬇️ Export Data as JSON</button>
+      <button class="btn btn-danger" onclick="clearAllData()">Clear all YTD data</button>
+    </div>
+    <div class="status-msg" id="status-msg"></div>
+  </div>
+
+  <!-- ── WEEKS LOADED ── -->
+  <div id="weeks-loaded-box" style="display:none;margin-bottom:1.25rem;"></div>
+
+  <!-- ── VIEWER ── -->
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-num blue"   id="stat-new">—</div><div class="stat-label">New Listings</div></div>
+    <div class="stat-card"><div class="stat-num purple" id="stat-buyer">—</div><div class="stat-label">Buyer Agr.</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#993556" id="stat-pend">—</div><div class="stat-label">Pending</div></div>
+  </div>
+  <div class="stats-bar-2">
+    <div class="stat-card"><div class="stat-num green"  id="stat-closed">—</div><div class="stat-label">Closed</div></div>
+    <div class="stat-card"><div class="stat-num teal"   id="stat-sold-vol">—</div><div class="stat-label">Total Sold $</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#1a1a18;font-weight:900" id="stat-lts-pct">—</div><div class="stat-label">List-to-Sold %</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" style="background:#1a1a18;color:#fff;border-color:transparent" onclick="showTab('summary',this,'#1a1a18')">Regional Summary</button>
+    <button class="tab" style="background:#185FA5;color:#fff;border-color:transparent" onclick="showTab('seacoast',this,'#185FA5')">Seacoast NH</button>
+    <button class="tab" style="background:#993556;color:#fff;border-color:transparent" onclick="showTab('ma',this,'#993556')">Massachusetts</button>
+    <button class="tab" style="background:#0F6E56;color:#fff;border-color:transparent" onclick="showTab('maine',this,'#0F6E56')">Maine</button>
+    <button class="tab" style="background:#ff00ff;color:#fff;border-color:transparent;font-weight:700" onclick="showTab('ytd',this,'#ff00ff')">YTD</button>
+  </div>
+
+  <div id="week-nav-bar" style="display:none;margin-bottom:1.25rem;"></div>
+
+  <div class="section active" id="tab-summary"><div id="summary-content"></div></div>
+  <div class="section" id="tab-seacoast"><div id="seacoast-content"></div></div>
+  <div class="section" id="tab-ma"><div id="ma-content"></div></div>
+  <div class="section" id="tab-maine"><div id="maine-content"></div></div>
+  <div class="section" id="tab-ytd"><div id="ytd-content"></div></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════════
+const MY_OFFICES=['exeter','portsmouth','andover','bradford','methuen','newburyport','saco','kennebunk'];
+const REGIONS=[
+  {id:'seacoast',name:'Seacoast NH',  offices:['exeter','portsmouth'],                       label:'Exeter · Portsmouth',                       color:'#185FA5',bg:'#E6F1FB',barColor:'#378ADD'},
+  {id:'ma',      name:'Massachusetts',offices:['andover','bradford','methuen','newburyport'],label:'Andover · Bradford · Methuen · Newburyport',color:'#993556',bg:'#FBEAF0',barColor:'#ED93B1'},
+  {id:'maine',   name:'Maine',        offices:['saco','kennebunk'],                           label:'Saco · Kennebunk',                           color:'#0F6E56',bg:'#E1F5EE',barColor:'#5DCAA5'},
+];
+const AVATAR_COLORS=[
+  {bg:'#E1F5EE',color:'#0F6E56'},{bg:'#E6F1FB',color:'#185FA5'},
+  {bg:'#FAEEDA',color:'#854F0B'},{bg:'#FBEAF0',color:'#993556'},
+  {bg:'#EEEDFE',color:'#534AB7'},{bg:'#FAECE7',color:'#993C1D'},
+];
+const STATUS_RANK={'NEW':1,'PEND':2,'CLOSED':3,'WITHDRAWN':1,'TERMINATED':1,'FALL THRU':0};
+const LOCAL_KEY='seaboard_admin_v4';
+const PUBLISH_TZ='America/New_York';
+let _currentWeekIdx=-1;
+let _ytdData={weeks:[]};
+let _isPreviewing=false;
+let _previewData=null;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GOOGLE DRIVE CONFIG — stored locally for admin convenience
+// ═══════════════════════════════════════════════════════════════════════════════
+function saveDriveConfig(){ setDriveStatus('Configuration saved.','ok'); return; //
+  const fileId=document.getElementById('drive-file-id').value.trim();
+  const apiKey=document.getElementById('google-api-key').value.trim();
+  if(!fileId||!apiKey){setDriveStatus('Please enter both the File ID and API key.','err');return;}
+  localStorage.setItem('sb_drive_file_id',fileId);
+  localStorage.setItem('sb_drive_api_key',apiKey);
+  setDriveStatus('✓ Configuration saved. Click "Test Connection" to verify.','ok');
+}
+
+function loadDriveConfig(){ return {fileId:true, apiKey:true}; }
+
+function setDriveStatus(msg,type){
+  const el=document.getElementById('drive-status');
+  el.textContent=msg;el.className='drive-status '+(type||'info');
+}
+
+function testDriveConnection(){
+  setDriveStatus('Testing connection...','info');
+  readFromDrive()
+    .then(function(data){
+      var weeks=(data&&data.weeks)?data.weeks.length:0;
+      setDriveStatus('✅ Connected — '+weeks+' week'+(weeks!==1?'s':'')+' in Drive','ok');
+    })
+    .catch(function(e){
+      setDriveStatus('❌ Connection failed: '+e.message,'err');
+    });
+}
+
+function exportDataAsJSON(){
+  if(!_ytdData||!_ytdData.weeks||!_ytdData.weeks.length){
+    alert('No data loaded to export.');
+    return;
+  }
+  var json = JSON.stringify(_ytdData, null, 2);
+  var blob = new Blob([json], {type:'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'seaboard_data.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  setDriveStatus('✅ seaboard_data.json downloaded — upload this file to Google Drive, replacing the existing seaboard_data.json file.','ok');
+}
+
+function syncAllWeeksToDrive(){
+  if(!_ytdData||!_ytdData.weeks||!_ytdData.weeks.length){
+    setDriveStatus('❌ No weeks loaded to sync.','err');
+    return;
+  }
+  setDriveStatus('Syncing '+_ytdData.weeks.length+' weeks to Drive...','info');
+  writeToDrive({weeks:_ytdData.weeks})
+    .then(function(){
+      setDriveStatus('✅ All '+_ytdData.weeks.length+' weeks synced to Drive successfully!','ok');
+    })
+    .catch(function(e){
+      setDriveStatus('❌ Sync failed: '+e.message,'err');
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GOOGLE DRIVE READ / WRITE
+// ═══════════════════════════════════════════════════════════════════════════════
+function readFromDrive(){
+  return fetch('https://script.google.com/macros/s/AKfycbxuZkW3zkNbcGYE3rrjq_q3HiF4Fv4GDZQ5qByvJfqay0C0ii7kzNKETccx2r4Amwz3/exec',{cache:'no-store'})
+    .then(function(res){
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      return res.text();
+    })
+    .then(function(text){
+      if(!text||text.trim()==='') return {weeks:[]};
+      return JSON.parse(text);
+    });
+}
+
+function writeToDrive(data){
+  return fetch('https://script.google.com/macros/s/AKfycbxuZkW3zkNbcGYE3rrjq_q3HiF4Fv4GDZQ5qByvJfqay0C0ii7kzNKETccx2r4Amwz3/exec', {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type': 'text/plain'},
+    body: JSON.stringify(data)
+  }).then(function(){
+    return {status:'ok'};
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PUBLISH SCHEDULE HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+function nextPublishTime(){
+  const now=new Date();
+  const etStr=now.toLocaleString('en-US',{timeZone:PUBLISH_TZ});
+  const et=new Date(etStr);
+  const day=et.getDay();
+  let daysUntilMonday=(1-day+7)%7;
+  if(daysUntilMonday===0){if(et.getHours()<17)daysUntilMonday=0;else daysUntilMonday=7;}
+  const next=new Date(et);
+  next.setDate(et.getDate()+daysUntilMonday);
+  next.setHours(17,0,0,0);
+  const diffMs=next-et;
+  return new Date(now.getTime()+diffMs);
+}
+
+function getNextPublishISO(){
+  return nextPublishTime().toISOString();
+}
+
+function isPublished(week){
+  if(!week.publishAt)return true; // legacy = always published
+  return new Date(week.publishAt)<=new Date();
+}
+
+function updatePublishStatusBar(){
+  const bar=document.getElementById('publish-status-bar');
+  const dot=document.getElementById('publish-dot');
+  const label=document.getElementById('publish-label');
+  const sub=document.getElementById('publish-sub');
+  const actions=document.getElementById('publish-actions');
+  actions.innerHTML='';
+
+  const weeks=_ytdData.weeks||[];
+  if(!weeks.length){
+    bar.className='publish-status none';dot.className='publish-dot none';
+    label.textContent='No data loaded';sub.textContent='Paste data below to get started';return;
+  }
+  const lastWeek=weeks[weeks.length-1];
+  if(isPublished(lastWeek)){
+    bar.className='publish-status live';dot.className='publish-dot live';
+    label.textContent=`✓ Live: "${lastWeek.label}"`;
+    sub.textContent=`Published — visible to all agents`;
+  }else{
+    bar.className='publish-status pending';dot.className='publish-dot pending';
+    label.textContent=`⏳ Pending: "${lastWeek.label}"`;
+    const pub=new Date(lastWeek.publishAt);
+    sub.textContent=`Publishes ${pub.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})} at 5:00 PM ET`;
+    const prevBtn=document.createElement('button');prevBtn.className='btn btn-preview';prevBtn.style.padding='6px 14px';prevBtn.style.fontSize='12px';
+    prevBtn.textContent='👁 Preview';prevBtn.onclick=previewPending;actions.appendChild(prevBtn);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PREVIEW MODE
+// ═══════════════════════════════════════════════════════════════════════════════
+function previewPending(){
+  const weeks=_ytdData.weeks||[];
+  const pending=weeks.filter(w=>!isPublished(w));
+  if(!pending.length){setMsg('No pending week to preview — all weeks are already published.','#BA7517');return;}
+  _isPreviewing=true;
+  _previewData={weeks:[...weeks]};
+  document.getElementById('preview-banner').classList.add('active');
+  const lastWeek=weeks[weeks.length-1];
+  const lastIdx=weeks.length-1;
+  _currentWeekIdx=lastIdx;
+  window._currentBuyerRows=lastWeek.buyerRows||[];
+  window._currentWeekDeals=lastWeek.weekDeals||{};
+  window._currentAgents=lastWeek.agents||{};
+  document.getElementById('current-week-label').textContent='PREVIEW: Week of '+lastWeek.label;
+  updateStatsBar(lastWeek.agents||{},lastWeek.deals||[]);
+  renderWeekNavBar();
+  var sel=document.getElementById('week-nav-select');
+  if(sel) sel.value=lastIdx;
+  renderSummary(lastWeek.agents||{},lastWeek.deals||[],'summary-content');
+  REGIONS.forEach(r=>renderAgentList(r.id+'-content',lastWeek.agents||{},lastWeek.deals||[],r.id,r.color));
+  renderYTD();
+}
+
+function exitPreview(){
+  _isPreviewing=false;_previewData=null;
+  document.getElementById('preview-banner').classList.remove('active');
+  // Reload only published data
+  const published=(_ytdData.weeks||[]).filter(isPublished);
+  if(published.length){
+    const last=published[published.length-1];
+    window._currentBuyerRows=last.buyerRows||[];
+    document.getElementById('current-week-label').textContent='Week of '+last.label;
+    renderAll(last.agents,last.deals||[],last.weekDeals||{});
+  }else{
+    document.getElementById('current-week-label').textContent='No published data';
+    renderAll({},{},[]);
+  }
+}
+
+function loadYTD(){
+  // Admin shows ALL weeks including pending so you can review before publish
+  return{weeks:_ytdData.weeks||[]};
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PARSING
+// ═══════════════════════════════════════════════════════════════════════════════
+function parseTSV(text){
+  const lines=text.trim().split('\n').filter(l=>l.trim());
+  if(!lines.length)return[];
+  const headers=lines[0].split('\t').map(h=>h.trim().toLowerCase());
+  return lines.slice(1).map(line=>{const cols=line.split('\t');const obj={};headers.forEach((h,i)=>obj[h]=(cols[i]||'').trim());return obj;});
+}
+function inRegion(office){return MY_OFFICES.includes((office||'').toLowerCase().trim());}
+function getRegionId(office){const o=(office||'').toLowerCase().trim();for(const r of REGIONS)if(r.offices.includes(o))return r.id;return null;}
+function agentKey(name){return(name||'').toLowerCase().trim().replace(/\s+/g,' ');}
+function weeklyScore(a){return(a.closed||0)+(a.pend||0)+(a.newL||0)+(a.buyer||0);}
+function initials(name){const p=(name||'').trim().split(/\s+/);return p.length===1?p[0].substring(0,2).toUpperCase():(p[0][0]+p[p.length-1][0]).toUpperCase();}
+function parseMoney(str){if(!str)return 0;const n=parseFloat((str+'').replace(/[$,\s]/g,''));return isNaN(n)?0:n;}
+function fmtMoney(n){if(n>=1000000)return'$'+(n/1000000).toFixed(2)+'M';if(n>=1000)return'$'+Math.round(n/1000)+'K';return'$'+Math.round(n).toLocaleString();}
+function fmtPct(n){return n.toFixed(1)+'%';}
+function sideBreakdown(l,b,bo){const p=[];if(l)p.push(`${l} list side`);if(b)p.push(`${b} buy side`);if(bo)p.push(`${bo} both sides`);return p.length?' · '+p.join(' / '):''}
+function dealKey(mls,name,addr,town,weekLabel){const m=(mls||'').trim().toUpperCase();if(m&&m!=='NON-MLS'&&m!=='')return'MLS:'+m;return'NONMLS:'+agentKey(name)+':'+((addr||'').toLowerCase().trim())+':'+((town||'').toLowerCase().trim())+':'+weekLabel;}
+
+function parseTransactions(tsv,weekLabel){
+  const rows=parseTSV(tsv);const agents={};const deals=[];const weekDeals={};
+  rows.forEach(r=>{
+    const office=r['office']||'';if(!inRegion(office))return;
+    const status=(r['status']||'').toUpperCase().trim();const name=(r['agent name']||'').trim();
+    if(!name||!status)return;
+    const mls=r['mls#']||r['mls']||'';
+    const notes=((r['notes']||'')+' '+(r['timestamp']||'')).toLowerCase();
+    const isBothSides=notes.includes('both sides');
+    const m=(mls||'').trim().toUpperCase();
+    let dk;
+    if(m&&m!=='NON-MLS'&&m!==''){
+      const mlsKey='MLS:'+m;
+      const existingDeal=weekDeals[mlsKey];
+      if(existingDeal&&agentKey(existingDeal.name)!==agentKey(name)&&!isBothSides){
+        const origKey='MLS:'+m+':'+agentKey(existingDeal.name);
+        weekDeals[origKey]=Object.assign({},weekDeals[mlsKey],{dk:origKey});
+        delete weekDeals[mlsKey];
+        dk='MLS:'+m+':'+agentKey(name);
+      } else {
+        dk=mlsKey;
+      }
+    } else {
+      dk='NONMLS:'+agentKey(name)+':'+((r['address']||'').toLowerCase().trim())+':'+((r['town']||'').toLowerCase().trim())+':'+weekLabel;
+    }
+    const rank=STATUS_RANK[status]||0;
+    if(!weekDeals[dk]||rank>(STATUS_RANK[weekDeals[dk].status]||0)){
+      weekDeals[dk]={status,name,office,mls:mls.trim(),addr:r['address']||'',town:r['town']||'',notes:notes,listP:parseMoney(r['list price']),soldP:parseMoney(r['sold price']),date:r['timestamp']||r['notes']||'',regionId:getRegionId(office),dk};
+    }
+  });
+  Object.values(weekDeals).forEach(d=>{
+    const{status,name,office,notes,listP,soldP,dk}=d;
+    const isBoth=notes.includes('both sides');const isListSide=notes.includes('list side')||isBoth;const isBuySide=notes.includes('buy side')||isBoth;
+    const count=isBoth?2:1;const key=agentKey(name);const regionId=getRegionId(office);
+    if(!agents[key])agents[key]={name,office,regionId,closed:0,closedList:0,closedBuy:0,closedBoth:0,closedVal:0,pend:0,pendList:0,pendBuy:0,pendBoth:0,pendVal:0,newL:0,newLVal:0,buyer:0,buyerAgency:0,showing:0,facilitator:0,withdrawn:0};
+    if(status==='CLOSED'){agents[key].closed+=count;agents[key].closedVal+=soldP||listP;if(isBoth)agents[key].closedBoth+=1;else if(isListSide)agents[key].closedList+=1;else if(isBuySide)agents[key].closedBuy+=1;}
+    else if(status==='PEND'){agents[key].pend+=count;agents[key].pendVal+=listP;if(isBoth)agents[key].pendBoth+=1;else if(isListSide)agents[key].pendList+=1;else if(isBuySide)agents[key].pendBuy+=1;}
+    else if(status==='NEW'){agents[key].newL+=count;agents[key].newLVal+=listP;}
+    else if(status==='WITHDRAWN'||status==='TERMINATED'){agents[key].withdrawn+=1;}
+    else if(status==='FALL THRU'){agents[key].pend=Math.max(0,agents[key].pend-count);}
+    if(['CLOSED','PEND','NEW'].includes(status))deals.push({status,regionId,listP,soldP,isBoth,count,dk});
+  });
+  return{agents,deals,weekDeals};
+}
+
+function parseBuyers(tsv,agentMap){
+  const rows=parseTSV(tsv);const buyerRows=[];
+  rows.forEach(r=>{
+    const office=r['office']||'';if(!inRegion(office))return;
+    const name=(r['agent name']||'').trim();if(!name)return;
+    const key=agentKey(name);const regionId=getRegionId(office);
+    if(!agentMap[key])agentMap[key]={name,office,regionId,closed:0,closedList:0,closedBuy:0,closedBoth:0,pend:0,pendList:0,pendBuy:0,pendBoth:0,newL:0,buyer:0,buyerAgency:0,showing:0,facilitator:0,withdrawn:0};
+    agentMap[key].buyer+=1;
+    const t=(r['type']||'').toLowerCase();let typeLabel='other';
+    if(t.includes('agency')){agentMap[key].buyerAgency+=1;typeLabel='agency';}
+    else if(t.includes('showing')){agentMap[key].showing+=1;typeLabel='showing';}
+    else if(t.includes('facilitator')||t.includes('transactional')){agentMap[key].facilitator+=1;typeLabel='facilitator';}
+    buyerRows.push({name,office,regionId:getRegionId(office),typeLabel});
+  });
+  return{agentMap,buyerRows};
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DATA LOAD / SAVE
+// ═══════════════════════════════════════════════════════════════════════════════
+function setMsg(text,color){const el=document.getElementById('status-msg');el.textContent=text;el.style.color=color||'#1D9E75';}
+
+function loadWeek(){
+  var label=document.getElementById('week-label-input').value.trim();
+  var txnText=document.getElementById('transactions-paste').value.trim();
+  var buyText=document.getElementById('buyers-paste').value.trim();
+  if(!label){setMsg('Please enter a week label first.','#A32D2D');return;}
+  if(!txnText){setMsg('Please paste transaction data.','#A32D2D');return;}
+
+  var parsed=parseTransactions(txnText,label);
+  var agentMap=parsed.agents,deals=parsed.deals,weekDeals=parsed.weekDeals,buyerRows=[];
+  if(buyText){var r=parseBuyers(buyText,parsed.agents);agentMap=r.agentMap;buyerRows=r.buyerRows;}
+
+  var publishAt=getNextPublishISO();
+  setMsg('Saving to Google Drive…','#185FA5');
+
+  readFromDrive()
+    .then(function(existing){
+      var weeks=existing.weeks||[];
+      var existingIdx=weeks.findIndex(function(w){return w.label===label;});
+      var weekEntry={label:label,loadedAt:new Date().toISOString(),publishAt:publishAt,agents:agentMap,deals:deals,weekDeals:weekDeals,buyerRows:buyerRows};
+      if(existingIdx>=0)weeks[existingIdx]=weekEntry;else weeks.push(weekEntry);
+      weeks.sort(function(a,b){return new Date(a.loadedAt)-new Date(b.loadedAt);});
+      return writeToDrive({weeks:weeks}).then(function(){return weeks;});
+    })
+    .then(function(weeks){
+      _ytdData={weeks:weeks};
+      window._currentBuyerRows=buyerRows;
+      document.getElementById('current-week-label').textContent='Saved: '+label;
+      renderAll(agentMap,deals,weekDeals);
+      updatePublishStatusBar();
+      renderWeeksLoaded();
+      setMsg('✓ Saved "'+label+'" to Drive. Will publish Monday at 5:00 PM ET.','#1D9E75');
+      document.getElementById('week-label-input').value='';
+      document.getElementById('transactions-paste').value='';
+      document.getElementById('buyers-paste').value='';
+    })
+    .catch(function(e){
+      setMsg('✗ Drive save failed: '+e.message,'#A32D2D');
+    });
+}
+
+function clearAllData(){
+  if(!confirm('Clear ALL weeks from Google Drive? This cannot be undone.'))return;
+  writeToDrive({weeks:[]})
+    .then(function(){
+      _ytdData={weeks:[]};
+      renderAll({},{},[]);
+      updatePublishStatusBar();
+      renderWeeksLoaded();
+      setMsg('All data cleared from Drive.','#1D9E75');
+    })
+    .catch(function(e){
+      setMsg('Clear failed: '+e.message,'#A32D2D');
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// YTD + RENDERING (identical logic to public file)
+// ═══════════════════════════════════════════════════════════════════════════════
+function buildYTDAgents(weeks,filterRegionId){
+  const registry={};const agentPts={};const agentMeta={};const agentWeeklyPts={};const agentBuyer={};
+  weeks.forEach((week,wi)=>{
+    const weekNewPts={};
+    Object.entries(week.weekDeals||{}).forEach(([dk,d])=>{
+      const ak=agentKey(d.name);if(!agentMeta[ak])agentMeta[ak]={name:d.name,office:d.office,regionId:getRegionId(d.office)};
+      if(!agentPts[ak])agentPts[ak]=0;if(!agentWeeklyPts[ak])agentWeeklyPts[ak]=new Array(weeks.length).fill(0);
+      if(!registry[dk]&&['CLOSED','PEND','NEW'].includes(d.status)){registry[dk]={agentKey:ak,weekIdx:wi,firstStatus:d.status};agentPts[ak]+=1;weekNewPts[ak]=(weekNewPts[ak]||0)+1;}
+    });
+    Object.values(week.agents||{}).forEach(a=>{
+      if(!a.buyer)return;const ak=agentKey(a.name);if(!agentMeta[ak])agentMeta[ak]={name:a.name,office:a.office,regionId:getRegionId(a.office)};
+      if(!agentPts[ak])agentPts[ak]=0;if(!agentWeeklyPts[ak])agentWeeklyPts[ak]=new Array(weeks.length).fill(0);if(!agentBuyer[ak])agentBuyer[ak]=0;
+      agentBuyer[ak]+=a.buyer;agentPts[ak]+=a.buyer;weekNewPts[ak]=(weekNewPts[ak]||0)+a.buyer;
+    });
+    Object.entries(weekNewPts).forEach(([ak,pts])=>{if(!agentWeeklyPts[ak])agentWeeklyPts[ak]=new Array(weeks.length).fill(0);agentWeeklyPts[ak][wi]=pts;});
+  });
+  const dealCurrentStatus={};const dealSideInfo={};const dealPrices={};
+  weeks.forEach(week=>{Object.entries(week.weekDeals||{}).forEach(([dk,d])=>{dealCurrentStatus[dk]=d.status;dealSideInfo[dk]={isBoth:d.notes.includes('both sides'),isListSide:d.notes.includes('list side')||d.notes.includes('both sides'),isBuySide:d.notes.includes('buy side')||d.notes.includes('both sides')};dealPrices[dk]={listP:d.listP||0,soldP:d.soldP||0};});});
+  const agentTruth={};Object.keys(agentMeta).forEach(ak=>{agentTruth[ak]={listings:0,pendings:0,closings:0,withdrawn:0,terminated:0,fallThru:0,listSideListings:0,everListSide:0,pendList:0,pendBuy:0,pendBoth:0,closedList:0,closedBuy:0,closedBoth:0,listedVal:0,pipelineVal:0,closedVal:0};});
+  Object.entries(registry).forEach(([dk,info])=>{
+    const ak=info.agentKey;if(!agentTruth[ak])return;const st=dealCurrentStatus[dk]||info.firstStatus;const si=dealSideInfo[dk]||{};const pr=dealPrices[dk]||{listP:0,soldP:0};
+    if(si.isListSide||si.isBoth)agentTruth[ak].everListSide++;
+    if(st==='NEW'){agentTruth[ak].listings++;agentTruth[ak].listedVal+=pr.listP;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings++;}
+    else if(st==='PEND'){agentTruth[ak].pendings++;agentTruth[ak].pipelineVal+=pr.listP;if(si.isBoth)agentTruth[ak].pendBoth++;else if(si.isListSide)agentTruth[ak].pendList++;else if(si.isBuySide)agentTruth[ak].pendBuy++;}
+    else if(st==='CLOSED'){agentTruth[ak].closings++;agentTruth[ak].closedVal+=pr.soldP||pr.listP;if(si.isBoth)agentTruth[ak].closedBoth++;else if(si.isListSide)agentTruth[ak].closedList++;else if(si.isBuySide)agentTruth[ak].closedBuy++;}
+    else if(st==='WITHDRAWN'){agentTruth[ak].withdrawn++;agentTruth[ak].listedVal+=pr.listP;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings++;}
+    else if(st==='TERMINATED'){agentTruth[ak].terminated++;agentTruth[ak].listedVal+=pr.listP;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings++;}
+    else if(st==='FALL THRU'){agentTruth[ak].fallThru++;}
+  });
+  const result={};Object.keys(agentMeta).forEach(ak=>{if(filterRegionId&&agentMeta[ak].regionId!==filterRegionId)return;result[ak]={...agentMeta[ak],points:agentPts[ak]||0,truth:{...agentTruth[ak],buyer:agentBuyer[ak]||0},weeklyPts:agentWeeklyPts[ak]||[]};});
+  return result;
+}
+
+function calcRegionMoney(deals,regionId){
+  const rd=deals.filter(d=>d.regionId===regionId);let soldTotal=0,closedListTotal=0,pendTotal=0,newTotal=0,aboveAsk=0;
+  rd.forEach(d=>{if(d.status==='CLOSED'){soldTotal+=d.soldP;closedListTotal+=d.listP;if(d.soldP>d.listP)aboveAsk++;}else if(d.status==='PEND')pendTotal+=d.listP;else if(d.status==='NEW')newTotal+=d.listP;});
+  return{soldTotal,pendTotal,newTotal,aboveAsk,ltsPct:closedListTotal>0?(soldTotal/closedListTotal)*100:0};
+}
+
+function sidePill(notes){const n=(notes||'').toLowerCase();if(n.includes('both sides'))return`<span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#E1F5EE;color:#0F6E56">Both</span>`;if(n.includes('list side'))return`<span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#E6F1FB;color:#185FA5">List</span>`;if(n.includes('buy side'))return`<span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#EEEDFE;color:#534AB7">Buy</span>`;return'';}
+function toSlug(str){return(str||'').toLowerCase().replace(/[#\/]/g,'').replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-');}
+function statePrefix(office){const o=(office||'').toLowerCase().trim();if(['saco','kennebunk'].includes(o))return'me';if(['andover','bradford','methuen','newburyport'].includes(o))return'ma';return'nh';}
+function veraniUrl(d){const mls=(d.mls||'').trim().toUpperCase();if(!mls||mls==='NON-MLS')return null;return`https://www.verani.com/${statePrefix(d.office)}-real-estate/${toSlug(d.town)}/${toSlug(d.addr)}-mls-${mls.toLowerCase()}`;}
+
+function renderBuyerTable(buyerRows,appendTo){
+  if(!buyerRows.length)return;const wrap=document.createElement('div');wrap.style.marginBottom='14px';
+  const hdr=document.createElement('div');hdr.setAttribute('data-section','BUYER');hdr.style.cssText='font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#fff;background:#534AB7;padding:5px 10px;border-radius:6px 6px 0 0';
+  hdr.textContent=`Buyers (${buyerRows.reduce((s,r)=>s+(r.buyer||1),0)})`;wrap.appendChild(hdr);
+  const tbl=document.createElement('table');tbl.className='detail-table';tbl.style.cssText='min-width:500px';tbl.innerHTML='<thead><tr><th>Agent</th><th>Type</th><th>#</th></tr></thead>';
+  const tbody=document.createElement('tbody');
+  const brByAgent={};(window._currentBuyerRows||[]).forEach(br=>{const ak=agentKey(br.name);if(!brByAgent[ak])brByAgent[ak]={agency:0,showing:0,facilitator:0};if(br.typeLabel==='agency')brByAgent[ak].agency++;else if(br.typeLabel==='showing')brByAgent[ak].showing++;else if(br.typeLabel==='facilitator')brByAgent[ak].facilitator++;});
+  buyerRows.sort((a,b)=>a.name.localeCompare(b.name)).forEach(r=>{const ak=agentKey(r.name);const br=brByAgent[ak]||{};const types=[];if(br.agency>0)types.push({label:'Buyer Agency',count:br.agency});if(br.showing>0)types.push({label:'Showing Agreement',count:br.showing});if(br.facilitator>0)types.push({label:'Facilitator/Transactional',count:br.facilitator});if(!types.length)types.push({label:'—',count:r.buyer||1});
+    types.forEach((t,i)=>{const tr=document.createElement('tr');tr.innerHTML=`${i===0?`<td class="detail-agent" rowspan="${types.length}">${r.name}</td>`:''}<td style="font-size:12px;color:#5F5E5A">${t.label}</td><td style="font-weight:500;font-size:12px">${t.count}</td>`;tbody.appendChild(tr);});});
+  tbl.appendChild(tbody);wrap.appendChild(tbl);appendTo.appendChild(wrap);
+}
+
+function renderDealSection(key,sect,appendTo){
+  if(!sect.deals.length)return;const isClosed=key==='CLOSED';const wrap=document.createElement('div');wrap.style.marginBottom='16px';
+  const hdr=document.createElement('div');hdr.style.cssText=`display:flex;align-items:center;justify-content:space-between;gap:12px;background:${sect.color};padding:7px 12px;border-radius:6px 6px 0 0`;
+  const tL=sect.deals.reduce((s,d)=>s+d.listP,0);const tS=sect.deals.reduce((s,d)=>s+d.soldP,0);
+  let rh='';if(isClosed){const p=tL>0?((tS/tL)*100).toFixed(1)+'%':'—';rh=`<span style="font-size:14px;font-weight:500;color:#fff;white-space:nowrap">LIST $ ${fmtMoney(tL)}&nbsp;&nbsp;·&nbsp;&nbsp;LIST-TO-SOLD ${p}&nbsp;&nbsp;·&nbsp;&nbsp;SOLD $ ${fmtMoney(tS)}</span>`;}
+  else if(key==='NEW')rh=`<span style="font-size:14px;font-weight:500;color:#fff;white-space:nowrap">LISTING $ ${fmtMoney(tL)}</span>`;
+  else if(key==='PEND')rh=`<span style="font-size:14px;font-weight:500;color:#fff;white-space:nowrap">PIPELINE $ ${fmtMoney(tL)}</span>`;
+  hdr.setAttribute('data-section',key);hdr.innerHTML=`<span style="font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#fff;white-space:nowrap">${sect.label} (${sect.deals.length})</span>${rh}`;wrap.appendChild(hdr);
+  const tbl=document.createElement('table');tbl.className='detail-table';tbl.style.cssText='min-width:500px';tbl.innerHTML=`<thead><tr><th>Agent</th><th>Address</th><th>Town</th><th>MLS #</th><th>List $</th>${isClosed?'<th>Sold $</th>':''}<th>Side</th></tr></thead>`;
+  const tbody=document.createElement('tbody');
+  sect.deals.sort((a,b)=>a.name.localeCompare(b.name)).forEach(d=>{const url=veraniUrl(d);const mlsCell=url?`<a href="${url}" target="_blank" style="color:#185FA5;font-weight:500;text-decoration:none;font-size:11px">${d.mls} ↗</a>`:`<span style="color:#aaa9a2;font-size:11px">${d.mls||'—'}</span>`;const tr=document.createElement('tr');tr.innerHTML=`<td><div class="detail-agent">${d.name}</div></td><td class="detail-address">${d.addr||'—'}</td><td style="font-size:12px">${d.town||'—'}</td><td>${mlsCell}</td><td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}<td>${sidePill(d.notes)}</td>`;tbody.appendChild(tr);});
+  tbl.appendChild(tbody);wrap.appendChild(tbl);appendTo.appendChild(wrap);
+}
+
+function renderRegionHeader(r,stats,money){
+  const pctDisplay=money.ltsPct>0?fmtPct(money.ltsPct):'—';
+  const aboveColor=money.aboveAsk>0?'#1D9E75':'#aaa9a2';
+  const hdr=document.createElement('div');hdr.className='region-header';hdr.style.background=r.bg;
+  hdr.innerHTML=`
+    <div class="region-header-top">
+      <div><div class="region-name" style="color:${r.color}">${r.name}</div><div class="region-offices" style="color:${r.color}">${r.label}</div></div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <div class="region-totals">
+          <span class="region-pill pill-new">${stats.newL} new</span>
+          ${[stats.buyerAgency>0?stats.buyerAgency+' Buy':'',stats.showing>0?stats.showing+' Sho':'',stats.facilitator>0?stats.facilitator+' Fac':''].filter(Boolean).map(t=>`<span class="region-pill pill-buyer">${t}</span>`).join('')||`<span class="region-pill pill-buyer">0 buyers</span>`}
+          <span class="region-pill pill-pend">${stats.pend} pending</span>
+          <span class="region-pill pill-closed">${stats.closed} closed</span>
+        </div>
+      </div>
+    </div>
+    <div class="region-money">
+      <div class="money-item"><div class="money-label" style="color:${r.color}">${stats.newL} Listing${stats.newL!==1?'s':''}</div><div class="money-value" style="color:${r.color}">${money.newTotal>0?fmtMoney(money.newTotal):'—'}</div></div>
+      <div class="money-item">
+        <div class="money-label" style="color:${r.color}">${stats.buyer} Buyer${stats.buyer!==1?'s':''}</div>
+        <div class="money-value" style="color:#534AB7;font-size:12px">${[stats.buyerAgency>0?stats.buyerAgency+' Buy':'',stats.facilitator>0?stats.facilitator+' Fac':'',stats.showing>0?stats.showing+' Sho':''].filter(Boolean).join(' / ')||'—'}</div>
+      </div>
+      <div class="money-item"><div class="money-label" style="color:${r.color}">${stats.pend} Pending${stats.pend!==1?'s':''}</div><div class="money-value" style="color:${r.color}">${money.pendTotal>0?fmtMoney(money.pendTotal):'—'}</div></div>
+      <div class="money-item"><div class="money-label" style="color:${r.color}">${stats.closed} Closed</div><div class="money-value" style="color:${r.color}">${money.soldTotal>0?fmtMoney(money.soldTotal):'—'}</div></div>
+      <div class="money-item"><div class="money-label" style="color:${r.color}">List-to-sold</div><div class="money-pct" style="color:#1a1a18">${pctDisplay}</div></div>
+      ${money.aboveAsk>0?`<div class="above-ask-badge" style="background:${r.bg};color:${aboveColor};border:1px solid ${aboveColor}">🔥 ${money.aboveAsk} above ask</div>`:''}
+    </div>`;
+  return hdr;
+}
+
+
+
+function renderAgentList(containerId,agentMap,deals,regionId,regionColor){
+  const el=document.getElementById(containerId);el.innerHTML='';const r=REGIONS.find(x=>x.id===regionId);
+  renderAgentListContent(el,agentMap,deals,regionId,regionColor,r,window._currentWeekDeals||{});
+}
+
+function renderAgentListContent(el,agentMap,deals,regionId,regionColor,r,weekDeals){
+  el.innerHTML='';const list=Object.values(agentMap).filter(a=>a.regionId===regionId).sort((a,b)=>weeklyScore(b)-weeklyScore(a));
+  const stats={closed:0,pend:0,newL:0,buyer:0,buyerAgency:0,showing:0,facilitator:0};
+  list.forEach(a=>{stats.closed+=a.closed;stats.pend+=a.pend;stats.newL+=a.newL;stats.buyer+=a.buyer;stats.buyerAgency+=(a.buyerAgency||0);stats.showing+=(a.showing||0);stats.facilitator+=(a.facilitator||0);});
+  const rbrs=(window._currentBuyerRows||[]).filter(br=>br.regionId===regionId);
+  if(rbrs.length){stats.buyerAgency=rbrs.filter(br=>br.typeLabel==='agency').length;stats.showing=rbrs.filter(br=>br.typeLabel==='showing').length;stats.facilitator=rbrs.filter(br=>br.typeLabel==='facilitator').length;}
+  const money=calcRegionMoney(deals,regionId);el.appendChild(renderRegionHeader(r,stats,money));
+  const activityWrap=document.createElement('div');activityWrap.style.cssText=`margin-bottom:8px;border-radius:10px;border:1px solid #e2e0d8;overflow:hidden`;
+  const actHdrTop=document.createElement('div');actHdrTop.style.cssText=`display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#fff;border-bottom:1px solid #e2e0d8;cursor:pointer;user-select:none`;
+  actHdrTop.innerHTML=`<span style="font-size:12px;font-weight:500;color:#1a1a18">📋 Weekly Activity</span><span id="act-toggle-${regionId}" style="font-size:11px;color:#888780">▼ Show</span>`;
+  const actPanel=document.createElement('div');actPanel.style.cssText=`padding:14px;background:#fafaf8;display:none`;
+  const actHdrBottom=document.createElement('div');actHdrBottom.style.cssText=`display:none;align-items:center;justify-content:center;padding:8px 14px;background:#fff;border-top:1px solid #e2e0d8;cursor:pointer;user-select:none`;
+  actHdrBottom.innerHTML=`<span style="font-size:11px;color:#888780">▲ Hide Weekly Activity</span>`;
+  let actOpen=false,actBuilt=false;
+  function toggleAct(){actOpen=!actOpen;actPanel.style.display=actOpen?'block':'none';actHdrBottom.style.display=actOpen?'flex':'none';document.getElementById(`act-toggle-${regionId}`).textContent=actOpen?'▲ Hide':'▼ Show';if(actOpen&&!actBuilt){buildActivityPanel(actPanel,weekDeals||window._currentWeekDeals||{},window._currentAgents||{},regionId,r);actBuilt=true;}}
+  actHdrTop.addEventListener('click',toggleAct);actHdrBottom.addEventListener('click',toggleAct);
+  actPanel.setAttribute('data-act-panel', regionId);
+  activityWrap.appendChild(actHdrTop);activityWrap.appendChild(actPanel);activityWrap.appendChild(actHdrBottom);el.appendChild(activityWrap);
+  const wlbWrap=document.createElement('div');wlbWrap.style.cssText=`margin-top:8px;border-radius:10px;border:1px solid ${r.color}30;overflow:hidden;background:#fff`;
+  const wlbHdrTop=document.createElement('div');wlbHdrTop.style.cssText=`display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:${r.bg};cursor:pointer;user-select:none`;
+  wlbHdrTop.innerHTML=`<div class="ytd-section-title" style="margin:0;border:none;padding:0;color:${r.color}">Weekly Agent Leaderboard</div><span id="wlb-toggle-${regionId}" style="font-size:11px;color:${r.color}">▼ Show</span>`;
+  const wlbPanel=document.createElement('div');wlbPanel.id=`wlb-panel-${regionId}`;wlbPanel.style.cssText=`padding:10px 14px`;
+  const wlbHdrBottom=document.createElement('div');wlbHdrBottom.style.cssText=`display:flex;align-items:center;justify-content:center;padding:8px 14px;background:${r.bg};cursor:pointer;user-select:none`;
+  wlbHdrBottom.innerHTML=`<span style="font-size:11px;color:${r.color}">▲ Hide Weekly Agent Leaderboard</span>`;
+  let wlbOpen=false;wlbPanel.style.display='none';wlbHdrBottom.style.display='none';function toggleWlb(){wlbOpen=!wlbOpen;wlbPanel.style.display=wlbOpen?'block':'none';wlbHdrBottom.style.display=wlbOpen?'flex':'none';document.getElementById(`wlb-toggle-${regionId}`).textContent=wlbOpen?'▲ Hide':'▼ Show';}
+  wlbHdrTop.addEventListener('click',toggleWlb);wlbHdrBottom.addEventListener('click',toggleWlb);
+  wlbWrap.appendChild(wlbHdrTop);wlbWrap.appendChild(wlbPanel);wlbWrap.appendChild(wlbHdrBottom);el.appendChild(wlbWrap);
+  const weeklyYtdAgents={};list.forEach(a=>{const ak=agentKey(a.name);weeklyYtdAgents[ak]={name:a.name,office:a.office,regionId:a.regionId,points:weeklyScore(a),weeklyPts:[weeklyScore(a)],truth:{listings:a.newL||0,pendings:a.pend||0,closings:a.closed||0,listSideListings:a.newL||0,pendList:a.pendList||0,pendBuy:a.pendBuy||0,pendBoth:a.pendBoth||0,closedList:a.closedList||0,closedBuy:a.closedBuy||0,closedBoth:a.closedBoth||0,withdrawn:a.withdrawn||0,terminated:a.terminated||0,fallThru:a.fallThru||0,listedVal:a.newLVal||0,pipelineVal:a.pendVal||0,closedVal:a.closedVal||0,buyer:a.buyer||0}};});
+  renderYTDAgentLeaderboard(`wlb-panel-${regionId}`,weeklyYtdAgents,[{label:'This week'}]);
+}
+
+function buildActivityPanel(panel,weekDeals,agents,regionId,r){
+  const filtered=Object.values(weekDeals).filter(d=>d.regionId===regionId);
+  if(!filtered.length){panel.innerHTML='<div style="color:#aaa9a2;font-size:13px">No transactions this week.</div>';return;}
+  const sections={NEW:{label:'New Listings',color:'#185FA5',deals:[]},PEND:{label:'Pending',color:'#993556',deals:[]},CLOSED:{label:'Closed',color:'#1D9E75',deals:[]},OTHER:{label:'Withdrawn / Fall Thru / Terminated',color:'#888780',deals:[]}};
+  filtered.forEach(d=>{if(d.status==='NEW')sections.NEW.deals.push(d);else if(d.status==='PEND')sections.PEND.deals.push(d);else if(d.status==='CLOSED')sections.CLOSED.deals.push(d);else sections.OTHER.deals.push(d);});
+  renderDealSection('NEW',sections.NEW,panel);renderBuyerTable(Object.values(agents||{}).filter(a=>a.buyer>0&&a.regionId===regionId),panel);renderDealSection('PEND',sections.PEND,panel);renderDealSection('CLOSED',sections.CLOSED,panel);renderDealSection('OTHER',sections.OTHER,panel);
+}
+
+function renderSparkline(weeklyPts,color){const max=Math.max(...weeklyPts,1);return'<div class="ytd-sparkline">'+weeklyPts.map(p=>p===0?`<div class="spark-bar spark-zero" style="height:4px"></div>`:`<div class="spark-bar" style="height:${Math.max(4,Math.round((p/max)*24))}px;background:${color}"></div>`).join('')+'</div>';}
+
+function renderYTDAgentLeaderboard(containerId,ytdAgents,weeks){
+  const el=document.getElementById(containerId);const medals=['🥇','🥈','🥉'];const list=Object.values(ytdAgents).sort((a,b)=>b.points-a.points);
+  list.filter(a=>a.points>0).forEach((a,i)=>{
+    const c=AVATAR_COLORS[i%AVATAR_COLORS.length];const t=a.truth||{};const row=document.createElement('div');row.className='ytd-agent-row';
+    let breakdown='';const totalListed=(t.listings||0)+(t.withdrawn||0)+(t.terminated||0);
+    if(totalListed)breakdown+=`<span class="pill pill-new">${totalListed} listed${sideBreakdown(t.listSideListings||0,(totalListed-(t.listSideListings||0)),0)}</span>`;
+    if(t.buyer)breakdown+=`<span class="pill pill-buyer">${t.buyer} buyer agr.</span>`;if(t.pendings)breakdown+=`<span class="pill pill-pend">${t.pendings} pending${sideBreakdown(t.pendList||0,t.pendBuy||0,t.pendBoth||0)}</span>`;if(t.closings)breakdown+=`<span class="pill pill-closed">${t.closings} closed${sideBreakdown(t.closedList||0,t.closedBuy||0,t.closedBoth||0)}</span>`;if(t.withdrawn)breakdown+=`<span class="pill pill-withdrawn">${t.withdrawn} WTDN</span>`;if(t.terminated)breakdown+=`<span class="pill pill-withdrawn">${t.terminated} TERM</span>`;if(t.fallThru)breakdown+=`<span class="pill pill-withdrawn">${t.fallThru} FT</span>`;
+    const ytdTotalVal=(t.listedVal||0)+(t.pipelineVal||0)+(t.closedVal||0);let convHtml='';
+    if(weeks.length>1){const everListSide=t.everListSide||0;const listSideClosings=(t.closedList||0)+(t.closedBoth||0);const lPct=everListSide>0?Math.round((listSideClosings/everListSide)*100):null;const pendResolved=t.closings+(t.pendings||0);const pPct=pendResolved>0&&t.closings>0?Math.round((t.closings/pendResolved)*100):null;if(lPct!==null||pPct!==null){convHtml='<div class="ytd-conv">';if(lPct!==null)convHtml+=`<span style="font-size:11px;font-weight:500;color:#185FA5;background:#E6F1FB;padding:2px 8px;border-radius:20px">📋 Listing conv. ${lPct}% · ${listSideClosings} of ${everListSide} closed</span>`;if(pPct!==null)convHtml+=`<span style="font-size:11px;font-weight:500;color:#993556;background:#FBEAF0;padding:2px 8px;border-radius:20px">⏳ Pending conv. ${pPct}% · ${t.closings} of ${pendResolved} closed</span>`;convHtml+='</div>';}}
+    const spark=weeks.length>1&&a.weeklyPts&&a.weeklyPts.length>0?renderSparkline(a.weeklyPts,'#1D9E75'):'';const weekLabels=weeks.map(w=>{const m=w.label.match(/\d+/);const num=m?parseInt(m[0]):0;return`<div class="spark-week-label">w${num<10?'0'+num:num}</div>`;}).join('');
+    row.innerHTML=`<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px"><div style="font-size:13px;font-weight:500;color:#aaa9a2;min-width:24px">${i<3?medals[i]:i+1}</div><div class="agent-init" style="background:${c.bg};color:${c.color};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0">${initials(a.name)}</div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:baseline"><div><div class="ytd-name">${a.name}</div><div style="font-size:11px;color:#aaa9a2">${a.office||''}</div></div><div class="ytd-pts" style="color:#1D9E75;flex-shrink:0;margin-left:8px">${a.points} pts</div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center">${breakdown}</div>${ytdTotalVal?`<div style="font-size:12px;font-weight:700;color:#1a1a18;white-space:nowrap;flex-shrink:0;margin-left:8px">${fmtMoney(ytdTotalVal)}</div>`:''}</div></div></div>${convHtml}${spark}${weeks.length>1?`<div class="ytd-weeks-label">${weekLabels}</div>`:''}`;
+    el.appendChild(row);
+  });
+  const noAct=list.filter(a=>a.points===0);
+  if(noAct.length){const lbl=document.createElement('div');lbl.className='no-board-lbl';lbl.textContent='Not yet on the board';el.appendChild(lbl);noAct.forEach(a=>{const row=document.createElement('div');row.className='agent-row';row.style.opacity='0.4';row.innerHTML=`<div class="rank-num">—</div><div class="agent-init" style="background:#f0efe8;color:#aaa9a2;border:1px dashed #d3d1c7">${initials(a.name)}</div><div style="flex:1"><div class="agent-name">${a.name}</div></div><span class="pill pill-zero">0 pts</span>`;el.appendChild(row);});}
+}
+
+function renderSummary(agentMap,deals,containerId){
+  const el=document.getElementById(containerId);el.innerHTML='';
+  const allStats=REGIONS.map(r=>{const list=Object.values(agentMap).filter(a=>a.regionId===r.id);const money=calcRegionMoney(deals,r.id);const brs=(window._currentBuyerRows||[]).filter(br=>br.regionId===r.id);const brAgency=brs.filter(br=>br.typeLabel==='agency').length;const brShowing=brs.filter(br=>br.typeLabel==='showing').length;const brFacilitator=brs.filter(br=>br.typeLabel==='facilitator').length;return{...r,stats:{closed:list.reduce((s,a)=>s+(a.closed||0),0),pend:list.reduce((s,a)=>s+(a.pend||0),0),newL:list.reduce((s,a)=>s+(a.newL||0),0),buyer:list.reduce((s,a)=>s+(a.buyer||0),0),buyerAgency:brAgency||list.reduce((s,a)=>s+(a.buyerAgency||0),0),showing:brShowing||list.reduce((s,a)=>s+(a.showing||0),0),facilitator:brFacilitator||list.reduce((s,a)=>s+(a.facilitator||0),0),pts:list.reduce((s,a)=>s+weeklyScore(a),0)},money};});
+  const maxPts=Math.max(...allStats.map(r=>r.stats.pts),1);
+  const grid=document.createElement('div');grid.className='summary-grid';
+  allStats.forEach(r=>{const s=r.stats,m=r.money,isLeader=s.pts===maxPts&&s.pts>0;const card=document.createElement('div');card.className='summary-card';card.style.cssText=`background:${r.bg};border-color:${r.bg}`;card.onclick=()=>{const tabs=document.querySelectorAll('.tab');showTab(r.id,tabs[REGIONS.findIndex(x=>x.id===r.id)+1],r.color);};
+    card.innerHTML=`
+      <div class="summary-region" style="color:${r.color}">${r.name}${isLeader?' 🏆':''}</div>
+      <div class="summary-offices" style="color:${r.color}">${r.label}</div>
+      <div class="summary-stat"><span style="color:${r.color};opacity:.7">Points</span><span style="color:${r.color};font-weight:700">${s.pts}</span></div>
+      <div class="summary-stat"><span style="color:${r.color};opacity:.7">${s.newL} Listing${s.newL!==1?'s':''}</span><span style="color:${r.color};font-weight:500">${m.newTotal>0?fmtMoney(m.newTotal):'—'}</span></div>
+      <div class="summary-stat"><span style="color:${r.color};opacity:.7">${s.buyer} Buyer${s.buyer!==1?'s':''}</span><span style="color:#534AB7;font-weight:500;font-size:11px">${[s.buyerAgency>0?s.buyerAgency+' Buy':'',s.showing>0?s.showing+' Sho':'',s.facilitator>0?s.facilitator+' Fac':''].filter(Boolean).join(' / ')||'—'}</span></div>
+      <div class="summary-stat"><span style="color:${r.color};opacity:.7">${s.pend} Pending${s.pend!==1?'s':''}</span><span style="color:${r.color};font-weight:500">${m.pendTotal>0?fmtMoney(m.pendTotal):'—'}</span></div>
+      <div class="summary-stat"><span style="color:${r.color};opacity:.7">${s.closed} Closed</span><span style="color:${r.color};font-weight:500">${m.soldTotal>0?fmtMoney(m.soldTotal):'—'}</span></div>
+      <div class="summary-stat"><span style="color:${r.color};opacity:.7">List-to-sold</span><span style="color:${r.color};font-weight:500">${m.ltsPct>0?fmtPct(m.ltsPct):'—'}</span></div>
+      <div class="summary-total" style="color:${r.color}"><span>Above ask</span><span>${m.aboveAsk} deal${m.aboveAsk!==1?'s':''}</span></div>`;
+    grid.appendChild(card);});
+  el.appendChild(grid);
+  const sorted=[...allStats].sort((a,b)=>b.stats.pts-a.stats.pts);if(sorted[0]&&sorted[0].stats.pts>0){const banner=document.createElement('div');banner.className='leader-banner';const l=sorted[0],m=l.money;banner.innerHTML=`<strong>${l.name}</strong> leads with <strong>${l.stats.pts} points</strong> and <strong>${m.soldTotal>0?fmtMoney(m.soldTotal):'—'} sold</strong>${m.ltsPct>0?' at '+fmtPct(m.ltsPct)+' of ask':''}.${m.aboveAsk>0?' 🔥 '+m.aboveAsk+' deal'+(m.aboveAsk!==1?'s':'')+' above list price.':''}`;el.appendChild(banner);}
+  const note=document.createElement('div');note.className='scoring-note';note.textContent='Weekly: 1 pt per transaction shown · YTD: 1 pt per unique deal, awarded once, tracked by MLS#';el.appendChild(note);
+  const standings=document.createElement('div');standings.className='standings';standings.innerHTML='<div class="standings-title">Regional Standing</div>';
+  [...allStats].sort((a,b)=>b.stats.pts-a.stats.pts).forEach((r,i)=>{const pct=Math.round((r.stats.pts/maxPts)*100);const row=document.createElement('div');row.className='standing-row';row.innerHTML=`<div class="standing-rank">${i+1}</div><div class="standing-name" style="color:${r.color}">${r.name}</div><div class="standing-bar-wrap"><div class="standing-bar" style="width:${pct}%;background:${r.barColor}"></div></div><div class="standing-pts" style="color:${r.color}">${r.stats.pts} pts</div><div class="standing-money">${r.money.soldTotal>0?fmtMoney(r.money.soldTotal):'—'}</div>`;standings.appendChild(row);});
+  el.appendChild(standings);
+  // ── WEEKLY ACTIVITY with region filter pills (replaces Weekly Detail) ────
+  const actWrapS=document.createElement('div');
+  actWrapS.style.cssText='margin-bottom:8px;border-radius:10px;border:1px solid #e2e0d8;overflow:hidden';
+  // Header row: title + toggle
+  const actHdrTopS=document.createElement('div');
+  actHdrTopS.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#fff;border-bottom:1px solid #e2e0d8;cursor:pointer;user-select:none';
+  actHdrTopS.innerHTML='<span style="font-size:12px;font-weight:500;color:#1a1a18">📋 Weekly Activity</span><span id="sum-act-toggle" style="font-size:11px;color:#888780">▼ Show</span>';
+  // Filter pills row (always visible once open)
+  const actPillRowS=document.createElement('div');
+  actPillRowS.style.cssText='display:none;gap:6px;flex-wrap:wrap;padding:8px 14px;background:#fafaf8;border-bottom:1px solid #e2e0d8';
+  const actPanelS=document.createElement('div');actPanelS.style.cssText='padding:14px;background:#fafaf8;display:none';
+  const actHdrBottomS=document.createElement('div');
+  actHdrBottomS.style.cssText='display:none;align-items:center;justify-content:center;padding:8px 14px;background:#fff;border-top:1px solid #e2e0d8;cursor:pointer;user-select:none';
+  actHdrBottomS.innerHTML='<span style="font-size:11px;color:#888780">▲ Hide Weekly Activity</span>';
+
+  let actOpenS=false;
+  let actFilterS=null; // null = show all
+
+  function buildActivityContent(filterRegionId){
+    actPanelS.innerHTML='';
+    const wd=window._currentWeekDeals||{};
+    const allDeals=Object.values(wd).filter(d=>!filterRegionId||d.regionId===filterRegionId);
+    if(!allDeals.length){actPanelS.innerHTML='<div style="color:#aaa9a2;font-size:13px">No transactions this week.</div>';return;}
+    const sections={NEW:{label:'New Listings',color:'#185FA5',deals:[]},PEND:{label:'Pending',color:'#993556',deals:[]},CLOSED:{label:'Closed',color:'#1D9E75',deals:[]},OTHER:{label:'Withdrawn / Fall Thru / Terminated',color:'#888780',deals:[]}};
+    allDeals.forEach(d=>{if(d.status==='NEW')sections.NEW.deals.push(d);else if(d.status==='PEND')sections.PEND.deals.push(d);else if(d.status==='CLOSED')sections.CLOSED.deals.push(d);else sections.OTHER.deals.push(d);});
+    renderDealSection('NEW',sections.NEW,actPanelS);
+    renderBuyerTable(Object.values(window._currentAgents||{}).filter(a=>a.buyer>0&&(!filterRegionId||a.regionId===filterRegionId)),actPanelS);
+    renderDealSection('PEND',sections.PEND,actPanelS);renderDealSection('CLOSED',sections.CLOSED,actPanelS);renderDealSection('OTHER',sections.OTHER,actPanelS);
+  }
+
+  // Build filter pills
+  const pillDefs=[{label:'All',regionId:null,bg:'#1a1a18'},...REGIONS.map(r=>({label:r.name,regionId:r.id,bg:r.color}))];
+  pillDefs.forEach(f=>{
+    const pill=document.createElement('button');
+    pill.textContent=f.label;
+    pill.style.cssText=`font-size:12px;font-weight:500;padding:4px 14px;border-radius:20px;border:2px solid transparent;cursor:pointer;font-family:'DM Sans',sans-serif;background:${f.bg};color:#fff;transition:all .15s`;
+    pill.onclick=(e)=>{
+      e.stopPropagation();
+      actFilterS=f.regionId;
+      actPillRowS.querySelectorAll('button').forEach(p=>{p.style.border='2px solid transparent';p.style.boxShadow='none';});
+      pill.style.border='2px solid #fff';pill.style.boxShadow='0 0 0 2px rgba(0,0,0,0.2)';
+      buildActivityContent(actFilterS);
+    };
+    actPillRowS.appendChild(pill);
+  });
+  // Set "All" active by default
+  actPillRowS.querySelector('button').style.border='2px solid #fff';
+  actPillRowS.querySelector('button').style.boxShadow='0 0 0 2px rgba(0,0,0,0.2)';
+
+  function toggleActS(){
+    actOpenS=!actOpenS;
+    actPillRowS.style.display=actOpenS?'flex':'none';
+    actPanelS.style.display=actOpenS?'block':'none';
+    actHdrBottomS.style.display=actOpenS?'flex':'none';
+    const t=document.getElementById('sum-act-toggle');if(t)t.textContent=actOpenS?'▲ Hide':'▼ Show';
+    if(actOpenS) buildActivityContent(actFilterS);
+  }
+  actHdrTopS.addEventListener('click',toggleActS);actHdrBottomS.addEventListener('click',toggleActS);
+  actWrapS.appendChild(actHdrTopS);actWrapS.appendChild(actPillRowS);actWrapS.appendChild(actPanelS);actWrapS.appendChild(actHdrBottomS);
+  el.appendChild(actWrapS);
+
+  // ── WEEKLY AGENT LEADERBOARD (all regions) ───────────────────────────────
+  const wlbWrapS=document.createElement('div');
+  wlbWrapS.style.cssText='margin-bottom:1.25rem;border-radius:10px;border:1px solid #e2e0d8;overflow:hidden;background:#fff';
+  const wlbHdrTopS=document.createElement('div');
+  wlbHdrTopS.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#fafaf8;border-bottom:1px solid #e2e0d8;cursor:pointer;user-select:none';
+  wlbHdrTopS.innerHTML='<div class="ytd-section-title" style="margin:0;border:none;padding:0">Weekly Agent Leaderboard</div><span id="sum-wlb-toggle" style="font-size:11px;color:#888780">▼ Show</span>';
+  const wlbPanelS=document.createElement('div');wlbPanelS.id='sum-wlb-panel';wlbPanelS.style.cssText='padding:10px 14px';
+  const wlbHdrBottomS=document.createElement('div');
+  wlbHdrBottomS.style.cssText='display:flex;align-items:center;justify-content:center;padding:8px 14px;background:#fafaf8;border-top:1px solid #e2e0d8;cursor:pointer;user-select:none';
+  wlbHdrBottomS.innerHTML='<span style="font-size:11px;color:#888780">▲ Hide Weekly Agent Leaderboard</span>';
+  let wlbOpenS=false;wlbPanelS.style.cssText='padding:10px 14px;display:none';wlbHdrBottomS.style.display='none';
+  function toggleWlbS(){wlbOpenS=!wlbOpenS;wlbPanelS.style.display=wlbOpenS?'block':'none';wlbHdrBottomS.style.display=wlbOpenS?'flex':'none';const t=document.getElementById('sum-wlb-toggle');if(t)t.textContent=wlbOpenS?'▲ Hide':'▼ Show';}
+  wlbHdrTopS.addEventListener('click',toggleWlbS);wlbHdrBottomS.addEventListener('click',toggleWlbS);
+  wlbWrapS.appendChild(wlbHdrTopS);wlbWrapS.appendChild(wlbPanelS);wlbWrapS.appendChild(wlbHdrBottomS);
+  el.appendChild(wlbWrapS);
+  const allWeeklyAgents={};
+  Object.values(agentMap).forEach(a=>{
+    const ak=(a.name||'').toLowerCase().trim();
+    allWeeklyAgents[ak]={name:a.name,office:a.office,regionId:a.regionId,points:weeklyScore(a),weeklyPts:[weeklyScore(a)],
+      truth:{listings:a.newL||0,pendings:a.pend||0,closings:a.closed||0,listSideListings:a.newL||0,pendList:a.pendList||0,pendBuy:a.pendBuy||0,pendBoth:a.pendBoth||0,closedList:a.closedList||0,closedBuy:a.closedBuy||0,closedBoth:a.closedBoth||0,withdrawn:a.withdrawn||0,terminated:0,fallThru:0,listedVal:a.newLVal||0,pipelineVal:a.pendVal||0,closedVal:a.closedVal||0,buyer:a.buyer||0}};
+  });
+  renderYTDAgentLeaderboard('sum-wlb-panel',allWeeklyAgents,[{label:'This week'}]);
+}
+
+function buildInlineDetailBanner(weekDeals,agents){
+  const banner=document.createElement('div');banner.className='detail-banner';const hdr=document.createElement('div');hdr.className='detail-banner-header';hdr.innerHTML=`<div class="detail-banner-title">📋 Weekly Detail</div><div class="detail-filter-pills"></div>`;banner.appendChild(hdr);const body=document.createElement('div');body.className='detail-banner-body';banner.appendChild(body);
+  const filters=[{label:'Show All',regionId:null,bg:'#1a1a18'},...REGIONS.map(r=>({label:r.name,regionId:r.id,bg:r.color}))];let activeFilter=undefined;const pillContainer=hdr.querySelector('.detail-filter-pills');
+  function renderInlineTable(regionId){body.innerHTML='';const filtered=Object.values(weekDeals).filter(d=>!regionId||d.regionId===regionId);if(!filtered.length){body.innerHTML='<div style="color:#aaa9a2;font-size:13px;padding:8px 0">No transactions for this region.</div>';return;}const sections={NEW:{label:'New Listings',color:'#185FA5',deals:[]},PEND:{label:'Pending',color:'#993556',deals:[]},CLOSED:{label:'Closed',color:'#1D9E75',deals:[]},OTHER:{label:'Withdrawn / Fall Thru / Terminated',color:'#888780',deals:[]}};filtered.forEach(d=>{if(d.status==='NEW')sections.NEW.deals.push(d);else if(d.status==='PEND')sections.PEND.deals.push(d);else if(d.status==='CLOSED')sections.CLOSED.deals.push(d);else sections.OTHER.deals.push(d);});renderDealSection('NEW',sections.NEW,body);renderBuyerTable(Object.values(agents||{}).filter(a=>a.buyer>0&&(!regionId||a.regionId===regionId)),body);renderDealSection('PEND',sections.PEND,body);renderDealSection('CLOSED',sections.CLOSED,body);renderDealSection('OTHER',sections.OTHER,body);}
+  const closeBtnStyle=`font-size:11px;font-weight:500;padding:4px 14px;border-radius:20px;border:1px solid #d3d1c7;background:#f0efe8;color:#5F5E5A;cursor:pointer;font-family:'DM Sans',sans-serif`;
+  const closeTop=document.createElement('div');closeTop.style.cssText=`display:none;padding:6px 14px;background:#f5f4f0;border-bottom:1px solid #e2e0d8`;closeTop.innerHTML=`<button style="${closeBtnStyle}">▲ Hide Weekly Detail</button>`;
+  const closeBottom=document.createElement('div');closeBottom.style.cssText=`display:none;padding:6px 14px;background:#f5f4f0;border-top:1px solid #e2e0d8;text-align:center`;closeBottom.innerHTML=`<button style="${closeBtnStyle}">▲ Hide Weekly Detail</button>`;
+  function closeDetail(){activeFilter=undefined;body.classList.remove('open');body.style.display='none';closeTop.style.display='none';closeBottom.style.display='none';pillContainer.querySelectorAll('.detail-filter-pill').forEach(p=>p.classList.remove('active'));}
+  closeTop.querySelector('button').addEventListener('click',closeDetail);closeBottom.querySelector('button').addEventListener('click',closeDetail);banner.insertBefore(closeTop,body);banner.appendChild(closeBottom);
+  filters.forEach(f=>{const pill=document.createElement('button');pill.className='detail-filter-pill';pill.textContent=f.label;pill.style.background=f.bg;pill.style.color='#fff';pill.style.border='2px solid transparent';pill.onclick=()=>{if(activeFilter===f.regionId&&activeFilter!==undefined){closeDetail();}else{activeFilter=f.regionId;body.classList.add('open');body.style.display='block';closeTop.style.display='block';closeBottom.style.display='block';renderInlineTable(f.regionId);pillContainer.querySelectorAll('.detail-filter-pill').forEach(p=>p.classList.remove('active'));pill.classList.add('active');}};pillContainer.appendChild(pill);});
+  return banner;
+}
+
+function renderWeeksLoaded(){
+  const container=document.getElementById('weeks-loaded-box');if(!container)return;container.innerHTML='';
+  const weeks=_ytdData.weeks||[];if(!weeks.length){container.style.display='none';return;}
+  container.style.display='block';const weekBox=document.createElement('div');weekBox.className='ytd-weeks-box';weekBox.style.marginBottom='0';weekBox.innerHTML='<div class="standings-title">Weeks loaded</div>';
+  // Sort weeks chronologically by loadedAt
+  const sortedWeeks=[...weeks].sort((a,b)=>new Date(a.loadedAt)-new Date(b.loadedAt));
+  sortedWeeks.forEach((w,i)=>{
+    const sold=(w.deals||[]).filter(d=>d.status==='CLOSED').reduce((s,d)=>s+d.soldP,0);
+    const pts=Object.values(w.agents||{}).reduce((s,a)=>s+weeklyScore(a),0);
+    const published=isPublished(w);
+    const weekNum=i+1;
+    const row=document.createElement('div');row.className='ytd-week-row';
+    row.innerHTML=`<span style="color:#5F5E5A;flex:1"><strong style="color:#534AB7">Wk ${weekNum}</strong> · ${w.label} ${published?'<span style="font-size:10px;background:#E1F5EE;color:#0F6E56;padding:1px 6px;border-radius:10px;margin-left:4px">Live</span>':'<span style="font-size:10px;background:#FAEEDA;color:#854F0B;padding:1px 6px;border-radius:10px;margin-left:4px">Pending</span>'}</span><span style="display:flex;gap:12px;align-items:center"><span style="color:#1D9E75;font-weight:500">${pts} pts</span><span style="color:#0F6E56;font-weight:500;min-width:50px;text-align:right">${sold>0?fmtMoney(sold):'—'}</span><button data-label="${w.label.replace(/"/g,'&quot;')}" style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid #F7C1C1;background:#FCEBEB;color:#A32D2D;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">✕ delete</button></span>`;
+    const btn=row.querySelector('button');
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();const lbl=this.getAttribute('data-label');
+      _ytdData.weeks=_ytdData.weeks.filter(function(wk){return wk.label!==lbl;});
+      writeToDrive({weeks:_ytdData.weeks})
+        .then(function(){
+          if(_ytdData.weeks.length){var last=_ytdData.weeks[_ytdData.weeks.length-1];renderAll(last.agents,last.deals||[],last.weekDeals||{});}else renderAll({},{},[]);
+          updatePublishStatusBar();renderWeeksLoaded();setMsg('Deleted "'+lbl+'".','#1D9E75');
+        })
+        .catch(function(err){setMsg('Delete failed: '+err.message,'#A32D2D');});
+    });
+    weekBox.appendChild(row);
+  });
+  container.appendChild(weekBox);
+}
+
+function renderYTD(){
+  const el=document.getElementById('ytd-content');el.innerHTML='';
+  const ytd=loadYTD();
+  if(!ytd.weeks.length){el.innerHTML='<div class="empty-state">No YTD data yet.</div>';return;}
+  const allDeals=ytd.weeks.flatMap(w=>w.deals||[]);
+  const ytdRegAgents={};
+  ytd.weeks.forEach(week=>{
+    Object.entries(week.agents||{}).forEach(([key,a])=>{
+      if(!ytdRegAgents[key])ytdRegAgents[key]={...a,buyer:0};
+      ytdRegAgents[key].closed=Math.max(ytdRegAgents[key].closed||0,a.closed||0);
+      ytdRegAgents[key].pend=Math.max(ytdRegAgents[key].pend||0,a.pend||0);
+      ytdRegAgents[key].newL=Math.max(ytdRegAgents[key].newL||0,a.newL||0);
+      ytdRegAgents[key].buyer=(ytdRegAgents[key].buyer||0)+(a.buyer||0);
+    });
+  });
+  const allStats=REGIONS.map(r=>{
+    const list=Object.values(ytdRegAgents).filter(a=>a.regionId===r.id);
+    const money=calcRegionMoney(allDeals,r.id);
+    return{...r,stats:{closed:list.reduce((s,a)=>s+(a.closed||0),0),pend:list.reduce((s,a)=>s+(a.pend||0),0),newL:list.reduce((s,a)=>s+(a.newL||0),0),buyer:list.reduce((s,a)=>s+(a.buyer||0),0),buyerAgency:list.reduce((s,a)=>s+(a.buyerAgency||0),0),showing:list.reduce((s,a)=>s+(a.showing||0),0),facilitator:list.reduce((s,a)=>s+(a.facilitator||0),0),pts:list.reduce((s,a)=>s+weeklyScore(a),0)},money};
+  });
+  const maxPts=Math.max(...allStats.map(r=>r.stats.pts),1);
+  const grid=document.createElement('div');grid.className='summary-grid';
+  allStats.forEach(r=>{
+    const s=r.stats,m=r.money,isLeader=s.pts===maxPts&&s.pts>0;
+    const card=document.createElement('div');card.className='summary-card';card.style.cssText=`background:${r.bg};border-color:${r.bg}`;
+    card.innerHTML=`<div class="summary-region" style="color:${r.color}">${r.name}${isLeader?' 🏆':''}</div><div class="summary-offices" style="color:${r.color}">${r.label}</div><div class="summary-stat"><span style="color:${r.color};opacity:.7">Points</span><span style="color:${r.color};font-weight:700">${s.pts}</span></div><div class="summary-stat"><span style="color:${r.color};opacity:.7">${s.newL} Listing${s.newL!==1?'s':''}</span><span style="color:${r.color};font-weight:500">${m.newTotal>0?fmtMoney(m.newTotal):'—'}</span></div><div class="summary-stat"><span style="color:${r.color};opacity:.7">${s.buyer} Buyer${s.buyer!==1?'s':''}</span><span style="color:#534AB7;font-weight:500;font-size:11px">${[s.buyerAgency>0?s.buyerAgency+' Buy':'',s.showing>0?s.showing+' Sho':'',s.facilitator>0?s.facilitator+' Fac':''].filter(Boolean).join(' / ')||'—'}</span></div><div class="summary-stat"><span style="color:${r.color};opacity:.7">${s.pend} Pending${s.pend!==1?'s':''}</span><span style="color:${r.color};font-weight:500">${m.pendTotal>0?fmtMoney(m.pendTotal):'—'}</span></div><div class="summary-stat"><span style="color:${r.color};opacity:.7">${s.closed} Closed</span><span style="color:${r.color};font-weight:500">${m.soldTotal>0?fmtMoney(m.soldTotal):'—'}</span></div><div class="summary-stat"><span style="color:${r.color};opacity:.7">List-to-sold</span><span style="color:${r.color};font-weight:500">${m.ltsPct>0?fmtPct(m.ltsPct):'—'}</span></div><div class="summary-total" style="color:${r.color}"><span>Above ask</span><span>${m.aboveAsk} deal${m.aboveAsk!==1?'s':''}</span></div>`;
+    grid.appendChild(card);
+  });
+  el.appendChild(grid);
+  const sorted=[...allStats].sort((a,b)=>b.stats.pts-a.stats.pts);
+  if(sorted[0]&&sorted[0].stats.pts>0){const banner=document.createElement('div');banner.className='leader-banner';const l=sorted[0],m=l.money;banner.innerHTML=`<strong>${l.name}</strong> leads with <strong>${l.stats.pts} points</strong> and <strong>${m.soldTotal>0?fmtMoney(m.soldTotal):'—'} sold</strong>${m.ltsPct>0?' at '+fmtPct(m.ltsPct)+' of ask':''}.${m.aboveAsk>0?' 🔥 '+m.aboveAsk+' deal'+(m.aboveAsk!==1?'s':'')+' above list price.':''}`;el.appendChild(banner);}
+  const note=document.createElement('div');note.className='scoring-note';note.textContent='YTD: 1 pt per unique deal, awarded once, tracked by MLS#';el.appendChild(note);
+  const standings=document.createElement('div');standings.className='standings';standings.innerHTML='<div class="standings-title">YTD Regional Standing</div>';
+  [...allStats].sort((a,b)=>b.stats.pts-a.stats.pts).forEach((r,i)=>{const pct=Math.round((r.stats.pts/maxPts)*100);const row=document.createElement('div');row.className='standing-row';row.innerHTML=`<div class="standing-rank">${i+1}</div><div class="standing-name" style="color:${r.color}">${r.name}</div><div class="standing-bar-wrap"><div class="standing-bar" style="width:${pct}%;background:${r.barColor}"></div></div><div class="standing-pts" style="color:${r.color}">${r.stats.pts} pts</div><div class="standing-money">${r.money.soldTotal>0?fmtMoney(r.money.soldTotal):'—'}</div>`;standings.appendChild(row);});
+  el.appendChild(standings);
+  const ytdAgents=buildYTDAgents(ytd.weeks);
+  const lbWrap=document.createElement('div');lbWrap.style.cssText='margin-top:12px;border-radius:10px;border:1px solid #e2e0d8;overflow:hidden;background:#fff';
+  const lbHdrTop=document.createElement('div');lbHdrTop.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#fafaf8;border-bottom:1px solid #e2e0d8;cursor:pointer;user-select:none';
+  lbHdrTop.innerHTML='<div class="ytd-section-title" style="margin:0;border:none;padding:0">YTD Agent Leaderboard</div><span id="ytd-lb-toggle" style="font-size:11px;color:#888780">▼ Show</span>';
+  const lbBoard=document.createElement('div');lbBoard.id='ytd-agent-board';lbBoard.style.cssText='padding:10px 14px;display:none';
+  const lbHdrBottom=document.createElement('div');lbHdrBottom.style.cssText='display:none;align-items:center;justify-content:center;padding:8px 14px;background:#fafaf8;border-top:1px solid #e2e0d8;cursor:pointer;user-select:none';
+  lbHdrBottom.innerHTML='<span style="font-size:11px;color:#888780">▲ Hide YTD Agent Leaderboard</span>';
+  let lbOpen=false,lbBuilt=false;
+  function toggleLb(){lbOpen=!lbOpen;lbBoard.style.display=lbOpen?'block':'none';lbHdrBottom.style.display=lbOpen?'flex':'none';document.getElementById('ytd-lb-toggle').textContent=lbOpen?'▲ Hide':'▼ Show';if(lbOpen&&!lbBuilt){renderYTDAgentLeaderboard('ytd-agent-board',ytdAgents,ytd.weeks);lbBuilt=true;}}
+  lbHdrTop.addEventListener('click',toggleLb);lbHdrBottom.addEventListener('click',toggleLb);
+  lbWrap.appendChild(lbHdrTop);lbWrap.appendChild(lbBoard);lbWrap.appendChild(lbHdrBottom);
+  el.appendChild(lbWrap);
+}
+
+function updateStatsBar(agentMap,deals){
+  const vals=Object.values(agentMap);document.getElementById('stat-new').textContent=vals.reduce((s,a)=>s+(a.newL||0),0);document.getElementById('stat-buyer').textContent=vals.reduce((s,a)=>s+(a.buyer||0),0);document.getElementById('stat-pend').textContent=vals.reduce((s,a)=>s+(a.pend||0),0);document.getElementById('stat-closed').textContent=vals.reduce((s,a)=>s+(a.closed||0),0);
+  const soldD=(deals||[]).filter(d=>d.status==='CLOSED');const soldT=soldD.reduce((s,d)=>s+d.soldP,0),listT=soldD.reduce((s,d)=>s+d.listP,0);document.getElementById('stat-sold-vol').textContent=soldT>0?fmtMoney(soldT):'—';document.getElementById('stat-lts-pct').textContent=listT>0?fmtPct((soldT/listT)*100):'—';
+}
+
+function renderYTDStandingsForWeek(weekIdx){const ytdEl=document.getElementById('ytd-sum-inner');if(!ytdEl)return;const ytd=loadYTD();if(!ytd.weeks.length)return;const weeksToUse=ytd.weeks.slice(0,weekIdx+1);const allDeals=weeksToUse.flatMap(w=>w.deals||[]);const ytdRegAgents={};weeksToUse.forEach(week=>{Object.entries(week.agents||{}).forEach(([key,a])=>{if(!ytdRegAgents[key])ytdRegAgents[key]={...a,buyer:0};ytdRegAgents[key].closed=Math.max(ytdRegAgents[key].closed||0,a.closed||0);ytdRegAgents[key].pend=Math.max(ytdRegAgents[key].pend||0,a.pend||0);ytdRegAgents[key].newL=Math.max(ytdRegAgents[key].newL||0,a.newL||0);ytdRegAgents[key].buyer=(ytdRegAgents[key].buyer||0)+(a.buyer||0);});});renderSummary(ytdRegAgents,allDeals,'ytd-sum-inner');}
+
+function renderWeekNavBar(){
+  const el=document.getElementById('week-nav-bar');if(!el)return;const ytd=loadYTD();if(!ytd.weeks.length){el.style.display='none';return;}
+  el.style.display='block';el.innerHTML='';const isLatest=_currentWeekIdx<0||_currentWeekIdx===ytd.weeks.length-1;const bar=document.createElement('div');bar.style.cssText='display:flex;align-items:center;gap:8px;background:#EEEDFE;border:1px solid #CECBF6;border-radius:12px;padding:8px 14px;';
+  const dot=document.createElement('div');dot.style.cssText='width:8px;height:8px;border-radius:50%;background:#534AB7;flex-shrink:0';bar.appendChild(dot);const lbl=document.createElement('span');lbl.style.cssText='font-size:12px;font-weight:500;color:#534AB7;white-space:nowrap;flex-shrink:0';lbl.textContent='Viewing week';bar.appendChild(lbl);
+  const prevBtn=document.createElement('button');prevBtn.innerHTML='←';prevBtn.style.cssText='width:28px;height:28px;border-radius:50%;border:1px solid #CECBF6;background:#fff;font-size:13px;color:#534AB7;cursor:pointer;flex-shrink:0';prevBtn.disabled=(_currentWeekIdx<=0);prevBtn.style.opacity=prevBtn.disabled?'0.3':'1';bar.appendChild(prevBtn);
+  const selWrap=document.createElement('div');selWrap.style.cssText='position:relative;flex:1;min-width:0';const sel=document.createElement('select');sel.id='week-nav-select';sel.style.cssText="width:100%;padding:5px 24px 5px 10px;border:1px solid #CECBF6;border-radius:8px;font-size:12px;font-weight:500;color:#534AB7;background:#fff;cursor:pointer;appearance:none;-webkit-appearance:none;font-family:'DM Sans',sans-serif";const curIdx=_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1;ytd.weeks.forEach((w,i)=>{const opt=document.createElement('option');opt.value=i;opt.textContent='Wk '+(i+1)+' · '+w.label;if(i===curIdx)opt.selected=true;sel.appendChild(opt);});const arr=document.createElement('div');arr.style.cssText='position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:#534AB7;font-size:9px';arr.textContent='▼';selWrap.appendChild(sel);selWrap.appendChild(arr);bar.appendChild(selWrap);
+  const nextBtn=document.createElement('button');nextBtn.innerHTML='→';nextBtn.style.cssText='width:28px;height:28px;border-radius:50%;border:1px solid #CECBF6;background:#fff;font-size:13px;color:#534AB7;cursor:pointer;flex-shrink:0';nextBtn.disabled=isLatest;nextBtn.style.opacity=nextBtn.disabled?'0.3':'1';bar.appendChild(nextBtn);
+  if(!isLatest){const curBtn=document.createElement('button');curBtn.textContent='→ Current week';curBtn.style.cssText="font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;border:1px solid #534AB7;background:#534AB7;color:#fff;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:'DM Sans',sans-serif";curBtn.addEventListener('click',()=>goToWeek(ytd.weeks.length-1));bar.appendChild(curBtn);}
+  el.appendChild(bar);
+  function goToWeek(idx){const y=loadYTD();if(idx<0||idx>=y.weeks.length)return;_currentWeekIdx=idx;const w=y.weeks[idx];updateStatsBar(w.agents||{},w.deals||[]);renderSummary(w.agents||{},w.deals||[],'summary-content');renderYTDStandingsForWeek(idx);REGIONS.forEach(r=>renderAgentList(r.id+'-content',w.agents||{},w.deals||[],r.id,r.color));window._currentWeekDeals=w.weekDeals||{};window._currentAgents=w.agents||{};window._currentBuyerRows=w.buyerRows||[];document.getElementById('current-week-label').textContent='Week of '+w.label;renderWeekNavBar();}
+  prevBtn.addEventListener('click',()=>goToWeek((_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1)-1));nextBtn.addEventListener('click',()=>goToWeek((_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1)+1));sel.addEventListener('change',function(){goToWeek(parseInt(this.value));});
+}
+
+function renderAll(agentMap,deals,weekDeals){
+  window._currentWeekDeals=weekDeals||{};window._currentAgents=agentMap||{};window._currentBuyerRows=window._currentBuyerRows||[];
+  updateStatsBar(agentMap,deals);
+  // In admin, keep week nav in sync with _currentWeekIdx
+  var ytd=loadYTD();
+  if(_currentWeekIdx<0&&ytd.weeks.length) _currentWeekIdx=ytd.weeks.length-1;
+  renderWeekNavBar();
+  const existingBanner=document.querySelector('.detail-banner');if(existingBanner)existingBanner.remove();
+  renderSummary(agentMap,deals,'summary-content');if(existingBanner){const summaryEl=document.getElementById('summary-content');const newBanner=summaryEl.querySelector('.detail-banner');if(newBanner)newBanner.replaceWith(existingBanner);else summaryEl.appendChild(existingBanner);}
+  REGIONS.forEach(r=>renderAgentList(r.id+'-content',agentMap,deals,r.id,r.color));renderYTD();
+}
+
+function showTab(id,el,color,afterRender){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  if(el)el.classList.add('active');
+  const ytd=loadYTD();if(!ytd.weeks.length)return;
+  const idx=(_currentWeekIdx>=0&&_currentWeekIdx<ytd.weeks.length)?_currentWeekIdx:ytd.weeks.length-1;
+  const w=ytd.weeks[idx];
+  if(id==='summary'){updateStatsBar(w.agents||{},w.deals||[]);document.getElementById('summary-content').innerHTML='';renderSummary(w.agents||{},w.deals||[],'summary-content');renderYTDStandingsForWeek(idx);}
+  else if(id==='ytd'){renderYTDStandingsForWeek(idx);}
+  else{const r=REGIONS.find(x=>x.id===id);if(r)renderAgentList(r.id+'-content',w.agents||{},w.deals||[],r.id,r.color);}
+  if(afterRender)setTimeout(afterRender,50);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// BOOT — load Drive config, then load data from Drive
+// ═══════════════════════════════════════════════════════════════════════════════
+(function init(){
+  function applyData(data){
+    _ytdData=data;
+    var weeks=_ytdData.weeks||[];
+    if(!weeks.length) return;
+    // Sort chronologically
+    weeks.sort(function(a,b){return new Date(a.loadedAt)-new Date(b.loadedAt);});
+    _ytdData.weeks=weeks;
+    // Always jump to most recent week including pending
+    var lastIdx=weeks.length-1;
+    var last=weeks[lastIdx];
+    _currentWeekIdx=lastIdx;
+    window._currentBuyerRows=last.buyerRows||[];
+    window._currentWeekDeals=last.weekDeals||{};
+    window._currentAgents=last.agents||{};
+    var isPending=!isPublished(last);
+    document.getElementById('current-week-label').textContent=(isPending?'PREVIEW: ':'')+'Week of '+last.label;
+    updateStatsBar(last.agents||{},last.deals||[]);
+    renderWeekNavBar();
+    // Force the dropdown to show the correct week
+    var sel=document.getElementById('week-nav-select');
+    if(sel) sel.value=lastIdx;
+    renderSummary(last.agents||{},last.deals||[],'summary-content');
+    REGIONS.forEach(function(r){renderAgentList(r.id+'-content',last.agents||{},last.deals||[],r.id,r.color);});
+    renderYTD();
+    updatePublishStatusBar();
+    renderWeeksLoaded();
+  }
+
+  readFromDrive()
+    .then(function(driveData){
+      if(!driveData.weeks||!driveData.weeks.length){
+        setDriveStatus('Seeding Drive with your existing data…','info');
+        return writeToDrive(MIGRATED_DATA).then(function(){
+          setDriveStatus('✓ Your existing data has been migrated to Google Drive!','ok');
+          return MIGRATED_DATA;
+        });
+      }
+      setDriveStatus('✓ Connected to Google Drive','ok');
+      return driveData;
+    })
+    .then(function(data){
+      applyData(data);
+    })
+    .catch(function(e){
+      setDriveStatus('Could not load from Drive: '+e.message,'err');
+      applyData(MIGRATED_DATA);
+    });
+})();
+
+</script>
+</body>
+</html>
