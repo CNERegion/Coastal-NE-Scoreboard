@@ -183,6 +183,7 @@
   
     .detail-table-wrap { position:relative; }
     .detail-table-wrap::after { content:''; position:absolute; right:0; top:0; bottom:0; width:30px; background:linear-gradient(to right, transparent, rgba(255,255,255,0.9)); pointer-events:none; }
+    .mobile-scroll-pill { display:inline-block !important; }
     .detail-banner-hdr { flex-wrap:wrap; }
     .detail-banner-hdr .hdr-title { flex:1; }
     .detail-banner-hdr .hdr-meta { white-space:nowrap; }
@@ -620,9 +621,9 @@ function renderDealSection(key,sect,appendTo){
   const totalListAmt=sect.deals.reduce((s,d)=>s+d.listP,0);
   const totalSoldAmt=sect.deals.reduce((s,d)=>s+d.soldP,0);
   let rightHtml='';
-  if(isClosed){const pct=totalListAmt>0?((totalSoldAmt/totalListAmt)*100).toFixed(1)+'%':'—';rightHtml=`<span style="font-size:14px;font-weight:500;color:#fff;white-space:nowrap">LIST $ ${fmtMoney(totalListAmt)}&nbsp;&nbsp;·&nbsp;&nbsp;LIST-TO-SOLD ${pct}&nbsp;&nbsp;·&nbsp;&nbsp;SOLD $ ${fmtMoney(totalSoldAmt)}</span>`;}
-  else if(key==='NEW')rightHtml=`<span style="font-size:14px;font-weight:500;color:#fff;white-space:nowrap">LISTING $ ${fmtMoney(totalListAmt)}</span>`;
-  else if(key==='PEND')rightHtml=`<span style="font-size:14px;font-weight:500;color:#fff;white-space:nowrap">PIPELINE $ ${fmtMoney(totalListAmt)}</span>`;
+  if(isClosed){const pct=totalListAmt>0?((totalSoldAmt/totalListAmt)*100).toFixed(1)+'%':'—';rightHtml=`<span style="font-size:13px;font-weight:500;color:#fff;white-space:normal;text-align:right;line-height:1.4">LIST ${fmtMoney(totalListAmt)} · ${pct} · SOLD ${fmtMoney(totalSoldAmt)}</span>`;}
+  else if(key==='NEW')rightHtml=`<span style="font-size:13px;font-weight:500;color:#fff">LISTING ${fmtMoney(totalListAmt)}</span>`;
+  else if(key==='PEND')rightHtml=`<span style="font-size:13px;font-weight:500;color:#fff">PIPELINE ${fmtMoney(totalListAmt)}</span>`;
   hdr.setAttribute('data-section', key);
   hdr.innerHTML=`<span style="font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#fff;white-space:nowrap">${sect.label} (${sect.deals.length}) <span class="mobile-scroll-pill" style="font-size:9px;font-weight:500;background:rgba(255,255,255,0.2);padding:2px 7px;border-radius:10px;white-space:nowrap">← scroll →</span></span>${rightHtml}`;
   wrap.appendChild(hdr);
