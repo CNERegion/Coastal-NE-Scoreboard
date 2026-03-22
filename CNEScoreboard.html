@@ -565,7 +565,8 @@ function renderBuyerTable(buyerRows,appendTo){
   hdr.style.cssText='font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#fff;background:#534AB7;padding:5px 10px;border-radius:6px 6px 0 0';
   hdr.textContent=`Buyers (${buyerRows.reduce((s,r)=>s+(r.buyer||1),0)})`;
   wrap.appendChild(hdr);
-  const tbl=document.createElement('table');tbl.className='detail-table';tbl.style.cssText='min-width:500px';
+  const tblWrap=document.createElement('div');tblWrap.style.cssText='overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%';
+  const tbl=document.createElement('table');tbl.className='detail-table';tbl.style.minWidth='500px';tbl.style.cssText='min-width:500px';
   tbl.innerHTML='<thead><tr><th>Agent</th><th>Type</th><th>#</th></tr></thead>';
   const tbody=document.createElement('tbody');
   const brByAgent={};
@@ -591,7 +592,7 @@ function renderBuyerTable(buyerRows,appendTo){
       tbody.appendChild(tr);
     });
   });
-  tbl.appendChild(tbody);wrap.appendChild(tbl);appendTo.appendChild(wrap);
+  tbl.appendChild(tbody);tblWrap.appendChild(tbl);wrap.appendChild(tblWrap);appendTo.appendChild(wrap);
 }
 
 function renderDealSection(key,sect,appendTo){
@@ -609,7 +610,8 @@ function renderDealSection(key,sect,appendTo){
   hdr.setAttribute('data-section', key);
   hdr.innerHTML=`<span style="font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#fff;white-space:nowrap">${sect.label} (${sect.deals.length})</span>${rightHtml}`;
   wrap.appendChild(hdr);
-  const tbl=document.createElement('table');tbl.className='detail-table';tbl.style.cssText='min-width:500px';
+  const tblWrap=document.createElement('div');tblWrap.style.cssText='overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%';
+  const tbl=document.createElement('table');tbl.className='detail-table';tbl.style.minWidth='500px';tbl.style.cssText='min-width:500px';
   tbl.innerHTML=`<thead><tr><th>Agent</th><th>Address</th><th>Town</th><th>MLS #</th><th>List $</th>${isClosed?'<th>Sold $</th>':''}<th>Side</th></tr></thead>`;
   const tbody=document.createElement('tbody');
   sect.deals.sort((a,b)=>a.name.localeCompare(b.name)).forEach(d=>{
@@ -625,7 +627,7 @@ function renderDealSection(key,sect,appendTo){
       <td>${sidePill(d.notes)}</td>`;
     tbody.appendChild(tr);
   });
-  tbl.appendChild(tbody);wrap.appendChild(tbl);appendTo.appendChild(wrap);
+  tbl.appendChild(tbody);tblWrap.appendChild(tbl);wrap.appendChild(tblWrap);appendTo.appendChild(wrap);
 }
 
 function renderRegionHeader(r,stats,money){
