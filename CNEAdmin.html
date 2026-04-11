@@ -402,7 +402,16 @@ function labelToDate(w){
   var lbl=(w.label||'').trim();
   var m=lbl.match(/([A-Za-z]+)\s+(\d+)/);
   var yr=lbl.match(/(\d{4})/);
-  if(m&&yr){ return new Date(m[1]+' '+m[2]+', '+yr[1]); }
+  if(m&&yr){
+    var month=m[1];
+    var day=parseInt(m[2]);
+    var year=parseInt(yr[1]);
+    var d=new Date(month+' '+day+', '+year);
+    if(month.toLowerCase().startsWith('dec')&&year>=2026){
+      d=new Date(month+' '+day+', '+(year-1));
+    }
+    return d;
+  }
   return new Date(w.loadedAt||0);
 }
 
