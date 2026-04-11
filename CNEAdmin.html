@@ -1041,7 +1041,7 @@ function renderWeeksLoaded(){
   const weeks=_ytdData.weeks||[];if(!weeks.length){container.style.display='none';return;}
   container.style.display='block';const weekBox=document.createElement('div');weekBox.className='ytd-weeks-box';weekBox.style.marginBottom='0';weekBox.innerHTML='<div class="standings-title">Weeks loaded</div>';
   // Sort weeks chronologically by loadedAt
-  const sortedWeeks=[...weeks].sort((a,b)=>new Date(a.loadedAt)-new Date(b.loadedAt));
+  const sortedWeeks=[...weeks].sort((a,b)=>new Date(a.loadedAt)-new Date(b.loadedAt)); _ytdData.weeks=sortedWeeks; // keep master list in sync
   sortedWeeks.forEach((w,i)=>{
     const sold=(w.deals||[]).filter(d=>d.status==='CLOSED').reduce((s,d)=>s+d.soldP,0);
     const pts=Object.values(w.agents||{}).reduce((s,a)=>s+weeklyScore(a),0);
