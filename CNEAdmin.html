@@ -1195,7 +1195,7 @@ function showTab(id,el,color,afterRender){
     var weeks=_ytdData.weeks||[];
     if(!weeks.length) return;
     // Sort chronologically
-    weeks.sort(function(a,b){return new Date(a.loadedAt)-new Date(b.loadedAt);});
+    weeks.sort(function(a,b){ return labelToDate(a)-labelToDate(b); });
     _ytdData.weeks=weeks;
     // Always jump to most recent week including pending
     var lastIdx=weeks.length-1;
