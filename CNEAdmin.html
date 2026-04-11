@@ -398,6 +398,14 @@ let _ytdData={weeks:[]};
 let _isPreviewing=false;
 let _previewData=null;
 
+function labelToDate(w){
+  var lbl=(w.label||'').trim();
+  var m=lbl.match(/([A-Za-z]+)\s+(\d+)/);
+  var yr=lbl.match(/(\d{4})/);
+  if(m&&yr){ return new Date(m[1]+' '+m[2]+', '+yr[1]); }
+  return new Date(w.loadedAt||0);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // GOOGLE DRIVE CONFIG — stored locally for admin convenience
 // ═══════════════════════════════════════════════════════════════════════════════
