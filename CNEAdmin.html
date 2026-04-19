@@ -649,7 +649,7 @@ function parseTransactions(tsv,weekLabel){
     const m=(mls||'').trim().toUpperCase();
     let dk;
     if(m&&m!=='NON-MLS'&&m!==''){
-      const mlsKey='MLS:'+m;
+      const mlsKey='MLS:'+m+':'+status;
       const existingDeal=weekDeals[mlsKey];
       if(existingDeal&&agentKey(existingDeal.name)!==agentKey(name)&&!isBothSides){
         const origKey='MLS:'+m+':'+agentKey(existingDeal.name);
