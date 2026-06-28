@@ -1181,11 +1181,11 @@ function renderWeekNavBar(){
   function goToWeek(idx){
     const y=loadYTD();if(idx<0||idx>=y.weeks.length)return;
     _currentWeekIdx=idx;const w=y.weeks[idx];
+    window._currentWeekDeals=w.weekDeals||{};window._currentAgents=w.agents||{};window._currentBuyerRows=w.buyerRows||[];
     updateStatsBar(w.agents||{},w.deals||[]);
     renderSummary(w.agents||{},w.deals||[],'summary-content');
     renderYTDStandingsForWeek(idx);
     REGIONS.forEach(r=>renderAgentList(r.id+'-content',w.agents||{},w.deals||[],r.id,r.color));
-    window._currentWeekDeals=w.weekDeals||{};window._currentAgents=w.agents||{};window._currentBuyerRows=w.buyerRows||[];
     document.getElementById('current-week-label').textContent='Week of '+w.label;
     renderWeekNavBar();
   }
