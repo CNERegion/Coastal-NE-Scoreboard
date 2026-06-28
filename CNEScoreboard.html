@@ -633,14 +633,16 @@ function renderDealSection(key,sect,appendTo){
   const wrap=document.createElement('div');wrap.style.marginBottom='16px';
   const hdr=document.createElement('div');
   hdr.style.cssText=`display:flex;align-items:center;justify-content:space-between;gap:12px;background:${sect.color};padding:7px 12px;border-radius:6px 6px 0 0`;
-  const totalListAmt=sect.deals.reduce((s,d)=>s+d.listP,0);
-  const totalSoldAmt=sect.deals.reduce((s,d)=>s+d.soldP,0);
+  const dealIsBoth=d=>!!(d.isBoth||(d.notes&&d.notes.includes('both sides')));
+  const displayCount=sect.deals.reduce((s,d)=>s+(dealIsBoth(d)?2:1),0);
+  const totalListAmt=sect.deals.reduce((s,d)=>s+d.listP*(dealIsBoth(d)?2:1),0);
+  const totalSoldAmt=sect.deals.reduce((s,d)=>s+d.soldP*(dealIsBoth(d)?2:1),0);
   let rightHtml='';
   if(isClosed){const pct=totalListAmt>0?((totalSoldAmt/totalListAmt)*100).toFixed(1)+'%':'—';rightHtml=`<span style="font-size:13px;font-weight:500;color:#fff;white-space:normal;text-align:right;line-height:1.4">LIST ${fmtMoney(totalListAmt)} · ${pct} · SOLD ${fmtMoney(totalSoldAmt)}</span>`;}
   else if(key==='NEW')rightHtml=`<span style="font-size:13px;font-weight:500;color:#fff">LISTING ${fmtMoney(totalListAmt)}</span>`;
   else if(key==='PEND')rightHtml=`<span style="font-size:13px;font-weight:500;color:#fff">PIPELINE ${fmtMoney(totalListAmt)}</span>`;
   hdr.setAttribute('data-section', key);
-  hdr.innerHTML=`<span style="font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#fff;white-space:nowrap">${sect.label} (${sect.deals.length}) <span class="mobile-scroll-pill" style="font-size:9px;font-weight:500;background:rgba(255,255,255,0.2);padding:2px 7px;border-radius:10px;white-space:nowrap">← scroll →</span></span>${rightHtml}`;
+  hdr.innerHTML=`<span style="font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#fff;white-space:nowrap">${sect.label} (${displayCount}) <span class="mobile-scroll-pill" style="font-size:9px;font-weight:500;background:rgba(255,255,255,0.2);padding:2px 7px;border-radius:10px;white-space:nowrap">← scroll →</span></span>${rightHtml}`;
   wrap.appendChild(hdr);
   const tblWrap=document.createElement('div');tblWrap.style.cssText='overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;position:relative';
   const fadeEl=document.createElement('div');fadeEl.className='scroll-fade-overlay';fadeEl.style.cssText='position:absolute;right:0;top:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,rgba(255,255,255,0.85));pointer-events:none;z-index:1';tblWrap.appendChild(fadeEl);tblWrap.addEventListener('scroll',function(){if(this.scrollLeft>10)fadeEl.style.display='none';});
@@ -650,15 +652,37 @@ function renderDealSection(key,sect,appendTo){
   sect.deals.sort((a,b)=>a.name.localeCompare(b.name)).forEach(d=>{
     const url=veraniUrl(d);
     const mlsCell=url?`<a href="${url}" target="_blank" style="color:#185FA5;font-weight:500;text-decoration:none;font-size:11px">${d.mls} ↗</a>`:`<span style="color:#aaa9a2;font-size:11px">${d.mls||'—'}</span>`;
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td><div class="detail-agent">${d.name}</div></td>
-      <td class="detail-address">${d.addr||'—'}</td>
-      <td style="font-size:12px">${d.town||'—'}</td>
-      <td>${mlsCell}</td>
-      <td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>
-      ${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}
-      <td>${sidePill(d.notes)}</td>`;
-    tbody.appendChild(tr);
+    const isBothSides=dealIsBoth(d);
+    if(isBothSides){
+      const tr1=document.createElement('tr');
+      tr1.innerHTML=`<td><div class="detail-agent">${d.name}</div></td>
+        <td class="detail-address">${d.addr||'—'}</td>
+        <td style="font-size:12px">${d.town||'—'}</td>
+        <td>${mlsCell}</td>
+        <td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>
+        ${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}
+        <td><span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#E6F1FB;color:#185FA5">List</span></td>`;
+      tbody.appendChild(tr1);
+      const tr2=document.createElement('tr');
+      tr2.innerHTML=`<td><div class="detail-agent">${d.name}</div></td>
+        <td class="detail-address">${d.addr||'—'}</td>
+        <td style="font-size:12px">${d.town||'—'}</td>
+        <td>${mlsCell}</td>
+        <td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>
+        ${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}
+        <td><span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#EEEDFE;color:#534AB7">Buy</span></td>`;
+      tbody.appendChild(tr2);
+    }else{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td><div class="detail-agent">${d.name}</div></td>
+        <td class="detail-address">${d.addr||'—'}</td>
+        <td style="font-size:12px">${d.town||'—'}</td>
+        <td>${mlsCell}</td>
+        <td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>
+        ${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}
+        <td>${sidePill(d.notes)}</td>`;
+      tbody.appendChild(tr);
+    }
   });
   tbl.appendChild(tbody);tblWrap.appendChild(tbl);wrap.appendChild(tblWrap);appendTo.appendChild(wrap);
 }
