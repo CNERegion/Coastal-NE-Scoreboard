@@ -477,10 +477,59 @@ function initDisplay(){
 // ═══════════════════════════════════════════════════════════════════════════════
 function inRegion(office){return MY_OFFICES.includes((office||'').toLowerCase().trim());}
 function getRegionId(office){const o=(office||'').toLowerCase().trim();for(const r of REGIONS)if(r.offices.includes(o))return r.id;return null;}
+const EXCLUDED_AGENTS=['donna mahoney','simon verkaik','lynne pinette','lorna gagnon','linda early'];
+const STRIP_FROM_JOINT=['donna mahoney','simon verkaik','lynne pinette','lorna gagnon','linda early'];
+const AGENT_ALIASES={
+  'tim driscoll':'Foss & Russell Group',
+  'kate foss':'Foss & Russell Group',
+  'jennifer russell':'Foss & Russell Group',
+  'tim driscoll-foss & russell group':'Foss & Russell Group',
+  'tim driscoll-foss & russell':'Foss & Russell Group',
+  'jill colby re':'Jill Colby Re',
+  'michelle daoust':"Michelle D'Aoust",
+  'erica dissel':'Erica Van Dissel',
+  'erica van dissel':'Erica Van Dissel',
+  'susan haberstroh':'Sue Haberstroh',
+  'susan haberstroh & paul hamblett':'Sue Haberstroh',
+  'sue haberstroh':'Sue Haberstroh',
+  'michael perry':'Mike Perry',
+  'marge squire':'Rogers Realty Team',
+  'marjorie squire':'Rogers Realty Team',
+  'catherine rogers':'Rogers Realty Team',
+  'hillary rogers':'Rogers Realty Team',
+  'reginald eld':'Reggie Eld',
+  'reginald s eld':'Reggie Eld',
+  'anthony ducharme':'Tony Ducharme',
+  'anthony salerno':'Tony Salerno',
+  'katherin early':'Kathryn Early',
+  'kathryn & linda early':'Kathryn Early',
+  'linda early/ kathryn ealry':'Kathryn Early',
+  'linda early/ kathryn early':'Kathryn Early',
+  'michael mullett':'Mike Mullett',
+  'shayne lopriore':'Shayna LoPriore',
+};
 const AGENT_REGION_OVERRIDES={'foss & russell group':'seacoast','jill colby re':'seacoast'};
 function getRegionIdForAgent(name,office){const ak=agentKey(name);if(AGENT_REGION_OVERRIDES[ak])return AGENT_REGION_OVERRIDES[ak];return getRegionId(office);}
-const AGENT_ALIASES={'marge squire':'Rogers Realty Team'};
 function resolveAgentName(name){const ak=agentKey(name);return AGENT_ALIASES[ak]||name;}
+function stripJointNames(name){
+  const parts=name.split(/\s*(?:&|\/|,| and )\s*/i).map(p=>p.trim()).filter(Boolean);
+  if(parts.length<2)return name;
+  const kept=parts.filter(p=>!STRIP_FROM_JOINT.includes(agentKey(p)));
+  if(kept.length===parts.length)return name;
+  if(!kept.length)return'';
+  return kept.join(' & ');
+}
+function cleanAgentName(raw){
+  let name=(raw||'').trim();
+  if(!name)return name;
+  const directKey=agentKey(name);
+  if(AGENT_ALIASES[directKey])return AGENT_ALIASES[directKey];
+  const stripped=stripJointNames(name);
+  if(stripped==='')return'';
+  if(stripped!==name){const k2=agentKey(stripped);return AGENT_ALIASES[k2]||stripped;}
+  return name;
+}
+function isExcluded(name){return EXCLUDED_AGENTS.includes((name||'').toLowerCase().trim());}
 function agentKey(name){return(name||'').toLowerCase().trim().replace(/\s+/g,' ');}
 function weeklyScore(a){return(a.closed||0)+(a.pend||0)+(a.newL||0)+(a.buyer||0);}
 function initials(name){const p=(name||'').trim().split(/\s+/);return p.length===1?p[0].substring(0,2).toUpperCase():(p[0][0]+p[p.length-1][0]).toUpperCase();}
@@ -493,8 +542,6 @@ function loadYTD(){return{weeks:_ytdData._publishedWeeks||_ytdData.weeks||[]};}
 // ═══════════════════════════════════════════════════════════════════════════════
 // YTD AGENT BUILDER
 // ═══════════════════════════════════════════════════════════════════════════════
-const EXCLUDED_AGENTS=['donna mahoney','simon verkaik'];
-function isExcluded(name){return EXCLUDED_AGENTS.includes((name||'').toLowerCase().trim());}
 
 // Strip excluded agents from all week data at startup before any rendering touches it
 function sanitizeWeekData(weeks){

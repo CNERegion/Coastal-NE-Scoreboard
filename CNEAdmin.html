@@ -615,10 +615,89 @@ function parseTSV(text){
 }
 function inRegion(office){return MY_OFFICES.includes((office||'').toLowerCase().trim());}
 function getRegionId(office){const o=(office||'').toLowerCase().trim();for(const r of REGIONS)if(r.offices.includes(o))return r.id;return null;}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AGENT NAME RULES
+// To add a new rule, just add one line below in the matching list — no other
+// code needs to change. Keys are always lowercase; spelling/spacing of the
+// name as typed in the report doesn't matter (it gets normalized automatically).
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// EXCLUDED_AGENTS: this person's SOLO transactions (no co-agent on the row) are dropped entirely.
+const EXCLUDED_AGENTS=['donna mahoney','simon verkaik','lynne pinette','lorna gagnon','linda early'];
+function isExcluded(name){return EXCLUDED_AGENTS.includes((name||'').toLowerCase().trim());}
+
+// STRIP_FROM_JOINT: when this person's name appears ALONGSIDE another name on the same row
+// (e.g. "Linda Early/ Kathryn Early"), their name is dropped and only the other name is kept.
+const STRIP_FROM_JOINT=['donna mahoney','simon verkaik','lynne pinette','lorna gagnon','linda early'];
+
+// AGENT_ALIASES: rewrites any of these spellings/variants to the one canonical name on the right.
+// Works no matter how the name is capitalized in the report. Also used to fold an
+// individual's deals into a team name (e.g. Marge Squire -> Rogers Realty Team).
+const AGENT_ALIASES={
+  'tim driscoll':'Foss & Russell Group',
+  'kate foss':'Foss & Russell Group',
+  'jennifer russell':'Foss & Russell Group',
+  'tim driscoll-foss & russell group':'Foss & Russell Group',
+  'tim driscoll-foss & russell':'Foss & Russell Group',
+  'jill colby re':'Jill Colby Re',
+  'michelle daoust':"Michelle D'Aoust",
+  'erica dissel':'Erica Van Dissel',
+  'erica van dissel':'Erica Van Dissel',
+  'susan haberstroh':'Sue Haberstroh',
+  'susan haberstroh & paul hamblett':'Sue Haberstroh',
+  'sue haberstroh':'Sue Haberstroh',
+  'michael perry':'Mike Perry',
+  'marge squire':'Rogers Realty Team',
+  'marjorie squire':'Rogers Realty Team',
+  'catherine rogers':'Rogers Realty Team',
+  'hillary rogers':'Rogers Realty Team',
+  'reginald eld':'Reggie Eld',
+  'reginald s eld':'Reggie Eld',
+  'anthony ducharme':'Tony Ducharme',
+  'anthony salerno':'Tony Salerno',
+  'katherin early':'Kathryn Early',
+  'kathryn & linda early':'Kathryn Early',
+  'linda early/ kathryn ealry':'Kathryn Early',
+  'linda early/ kathryn early':'Kathryn Early',
+  'michael mullett':'Mike Mullett',
+  'shayne lopriore':'Shayna LoPriore',
+};
+
+// AGENT_REGION_OVERRIDES: forces a person/team to always count under one region,
+// no matter which office happens to be typed on that row.
 const AGENT_REGION_OVERRIDES={'foss & russell group':'seacoast','jill colby re':'seacoast'};
 function getRegionIdForAgent(name,office){const ak=agentKey(name);if(AGENT_REGION_OVERRIDES[ak])return AGENT_REGION_OVERRIDES[ak];return getRegionId(office);}
-const AGENT_ALIASES={'marge squire':'Rogers Realty Team'};
+
 function resolveAgentName(name){const ak=agentKey(name);return AGENT_ALIASES[ak]||name;}
+
+// stripJointNames: splits a joint name on common separators (&, /, "and", comma) and removes
+// any token that exactly matches someone in STRIP_FROM_JOINT, keeping whoever's left.
+// If nothing in the name matches the strip list, the original string is returned untouched
+// (so genuine team names like "Foss & Russell Group" are never accidentally split apart).
+function stripJointNames(name){
+  const parts=name.split(/\s*(?:&|\/|,| and )\s*/i).map(p=>p.trim()).filter(Boolean);
+  if(parts.length<2)return name;
+  const kept=parts.filter(p=>!STRIP_FROM_JOINT.includes(agentKey(p)));
+  if(kept.length===parts.length)return name;
+  if(!kept.length)return'';
+  return kept.join(' & ');
+}
+
+// cleanAgentName: the single entry point used wherever an agent name is read off a pasted row.
+// 1) Exact alias match on the whole string (handles tricky compound cases like
+//    "Kathryn & Linda Early" or "Susan Haberstroh & Paul Hamblett").
+// 2) Otherwise, strip any co-listed excluded names, then alias-resolve whatever's left.
+function cleanAgentName(raw){
+  let name=(raw||'').trim();
+  if(!name)return name;
+  const directKey=agentKey(name);
+  if(AGENT_ALIASES[directKey])return AGENT_ALIASES[directKey];
+  const stripped=stripJointNames(name);
+  if(stripped==='')return'';
+  if(stripped!==name){const k2=agentKey(stripped);return AGENT_ALIASES[k2]||stripped;}
+  return name;
+}
 function agentKey(name){return(name||'').toLowerCase().trim().replace(/\s+/g,' ');}
 function weeklyScore(a){return(a.closed||0)+(a.pend||0)+(a.newL||0)+(a.buyer||0);}
 function initials(name){const p=(name||'').trim().split(/\s+/);return p.length===1?p[0].substring(0,2).toUpperCase():(p[0][0]+p[p.length-1][0]).toUpperCase();}
@@ -627,9 +706,6 @@ function fmtMoney(n){if(n>=1000000)return'$'+(n/1000000).toFixed(2)+'M';if(n>=10
 function fmtPct(n){return n.toFixed(1)+'%';}
 function sideBreakdown(l,b,bo){const p=[];if(l)p.push(`${l} list side`);if(b)p.push(`${b} buy side`);if(bo)p.push(`${bo} both sides`);return p.length?' · '+p.join(' / '):''}
 function dealKey(mls,name,addr,town,weekLabel){const m=(mls||'').trim().toUpperCase();if(m&&m!=='NON-MLS'&&m!=='')return'MLS:'+m;return'NONMLS:'+agentKey(name)+':'+((addr||'').toLowerCase().trim())+':'+((town||'').toLowerCase().trim())+':'+weekLabel;}
-
-const EXCLUDED_AGENTS=['donna mahoney','simon verkaik'];
-function isExcluded(name){return EXCLUDED_AGENTS.includes((name||'').toLowerCase().trim());}
 
 // Strip excluded agents from all historical week data before any rendering touches it
 function sanitizeWeekData(weeks){
@@ -644,7 +720,7 @@ function parseTransactions(tsv,weekLabel){
   const rows=parseTSV(tsv);const agents={};const deals=[];const weekDeals={};
   rows.forEach(r=>{
     const office=r['office']||'';if(!inRegion(office))return;
-    const status=(r['status']||'').toUpperCase().trim();const name=resolveAgentName((r['agent name']||'').trim());
+    const status=(r['status']||'').toUpperCase().trim();const name=cleanAgentName(r['agent name']);
     if(!name||!status)return;
     if(isExcluded(name))return;
     const mls=r['mls#']||r['mls']||'';
@@ -671,6 +747,7 @@ function parseTransactions(tsv,weekLabel){
       weekDeals[dk]={status,name,office,mls:mls.trim(),addr:r['address']||'',town:r['town']||'',notes:notes,listP:parseMoney(r['list price']),soldP:parseMoney(r['sold price']),date:r['timestamp']||r['notes']||'',regionId:getRegionIdForAgent(name,office),dk};
     }
   });
+  pruneSupersededDeals(weekDeals);
   Object.values(weekDeals).forEach(d=>{
     const{status,name,office,notes,listP,soldP,dk}=d;
     const isBoth=notes.includes('both sides');const isListSide=notes.includes('list side')||isBoth;const isBuySide=notes.includes('buy side')||isBoth;
@@ -680,17 +757,44 @@ function parseTransactions(tsv,weekLabel){
     else if(status==='PEND'){agents[key].pend+=count;agents[key].pendVal+=listP;if(isBoth)agents[key].pendBoth+=1;else if(isListSide)agents[key].pendList+=1;else if(isBuySide)agents[key].pendBuy+=1;}
     else if(status==='NEW'){agents[key].newL+=count;agents[key].newLVal+=listP;}
     else if(status==='WITHDRAWN'||status==='TERMINATED'){agents[key].withdrawn+=1;}
-    else if(status==='FALL THRU'){agents[key].pend=Math.max(0,agents[key].pend-count);}
+    else if(status==='FALL THRU'){if(!d._sameWeekSupersede)agents[key].pend=Math.max(0,agents[key].pend-count);}
     if(['CLOSED','PEND','NEW'].includes(status))deals.push({status,regionId,listP,soldP,isBoth,count,dk});
   });
   return{agents,deals,weekDeals};
+}
+
+// pruneSupersededDeals: if the same MLS# has both a PEND and a FALL THRU row in the same
+// week's report, the property didn't stay pending -- drop the stale PEND row (the FALL THRU
+// row itself stays visible in the Withdrawn/Fall Thru section, so nothing is hidden, just
+// de-duplicated). Same idea for a NEW listing that was also WITHDRAWN or TERMINATED that week.
+function pruneSupersededDeals(weekDeals){
+  const byMls={};
+  Object.entries(weekDeals).forEach(([dk,d])=>{
+    const m=(d.mls||'').trim().toUpperCase();
+    if(!m||m==='NON-MLS')return;
+    if(!byMls[m])byMls[m]=[];
+    byMls[m].push(dk);
+  });
+  Object.values(byMls).forEach(dks=>{
+    const fallThruKeys=dks.filter(dk=>weekDeals[dk].status==='FALL THRU');
+    const pendKeys=dks.filter(dk=>weekDeals[dk].status==='PEND');
+    if(fallThruKeys.length&&pendKeys.length){
+      pendKeys.forEach(dk=>delete weekDeals[dk]);
+      fallThruKeys.forEach(dk=>{weekDeals[dk]._sameWeekSupersede=true;});
+    }
+    const closedOutKeys=dks.filter(dk=>weekDeals[dk]&&['WITHDRAWN','TERMINATED'].includes(weekDeals[dk].status));
+    const newKeys=dks.filter(dk=>weekDeals[dk]&&weekDeals[dk].status==='NEW');
+    if(closedOutKeys.length&&newKeys.length){
+      newKeys.forEach(dk=>delete weekDeals[dk]);
+    }
+  });
 }
 
 function parseBuyers(tsv,agentMap){
   const rows=parseTSV(tsv);const buyerRows=[];
   rows.forEach(r=>{
     const office=r['office']||'';if(!inRegion(office))return;
-    const name=resolveAgentName((r['agent name']||'').trim());if(!name)return;
+    const name=cleanAgentName(r['agent name']);if(!name)return;
     if(isExcluded(name))return;
     const key=agentKey(name);const regionId=getRegionIdForAgent(name,office);
     if(!agentMap[key])agentMap[key]={name,office,regionId,closed:0,closedList:0,closedBuy:0,closedBoth:0,pend:0,pendList:0,pendBuy:0,pendBoth:0,newL:0,buyer:0,buyerAgency:0,showing:0,facilitator:0,withdrawn:0};
