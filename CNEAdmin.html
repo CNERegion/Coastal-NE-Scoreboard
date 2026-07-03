@@ -1217,21 +1217,17 @@ function renderYTD(){
   const el=document.getElementById('ytd-content');el.innerHTML='';
   const ytd=loadYTD();
   if(!ytd.weeks.length){el.innerHTML='<div class="empty-state">No YTD data yet.</div>';return;}
-  const allDeals=ytd.weeks.flatMap(w=>w.deals||[]);
-  const ytdRegAgents={};
-  ytd.weeks.forEach(week=>{
-    Object.entries(week.agents||{}).forEach(([key,a])=>{
-      if(!ytdRegAgents[key])ytdRegAgents[key]={...a,buyer:0};
-      ytdRegAgents[key].closed=Math.max(ytdRegAgents[key].closed||0,a.closed||0);
-      ytdRegAgents[key].pend=Math.max(ytdRegAgents[key].pend||0,a.pend||0);
-      ytdRegAgents[key].newL=Math.max(ytdRegAgents[key].newL||0,a.newL||0);
-      ytdRegAgents[key].buyer=(ytdRegAgents[key].buyer||0)+(a.buyer||0);
-    });
-  });
+  const weekIdx=typeof _currentWeekIdx==='number'&&_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1;
+  const weeksToUse=ytd.weeks.slice(0,weekIdx+1);
+  const allDeals=weeksToUse.flatMap(w=>w.deals||[]);
+  const ytdAgents=buildYTDAgents(weeksToUse);
   const allStats=REGIONS.map(r=>{
-    const list=Object.values(ytdRegAgents).filter(a=>a.regionId===r.id);
+    const list=Object.values(ytdAgents).filter(a=>a.regionId===r.id);
     const money=calcRegionMoney(allDeals,r.id);
-    return{...r,stats:{closed:list.reduce((s,a)=>s+(a.closed||0),0),pend:list.reduce((s,a)=>s+(a.pend||0),0),newL:list.reduce((s,a)=>s+(a.newL||0),0),buyer:list.reduce((s,a)=>s+(a.buyer||0),0),buyerAgency:list.reduce((s,a)=>s+(a.buyerAgency||0),0),showing:list.reduce((s,a)=>s+(a.showing||0),0),facilitator:list.reduce((s,a)=>s+(a.facilitator||0),0),pts:list.reduce((s,a)=>s+weeklyScore(a),0)},money};
+    const rDeals=allDeals.filter(d=>d.regionId===r.id);
+    const cntByStatus=st=>rDeals.filter(d=>d.status===st).reduce((s,d)=>s+(d.count||1),0);
+    const brs=[];
+    return{...r,stats:{closed:cntByStatus('CLOSED'),pend:cntByStatus('PEND'),newL:cntByStatus('NEW'),buyer:list.reduce((s,a)=>s+(a.truth?.buyer||a.buyer||0),0),buyerAgency:list.reduce((s,a)=>s+(a.truth?.buyerAgency||a.buyerAgency||0),0),showing:list.reduce((s,a)=>s+(a.truth?.showing||a.showing||0),0),facilitator:list.reduce((s,a)=>s+(a.truth?.facilitator||a.facilitator||0),0),pts:list.reduce((s,a)=>s+(a.points||0),0)},money};
   });
   const maxPts=Math.max(...allStats.map(r=>r.stats.pts),1);
   const grid=document.createElement('div');grid.className='summary-grid';
@@ -1248,7 +1244,6 @@ function renderYTD(){
   const standings=document.createElement('div');standings.className='standings';standings.innerHTML='<div class="standings-title">YTD Regional Standing</div>';
   [...allStats].sort((a,b)=>b.stats.pts-a.stats.pts).forEach((r,i)=>{const pct=Math.round((r.stats.pts/maxPts)*100);const row=document.createElement('div');row.className='standing-row';row.innerHTML=`<div class="standing-rank">${i+1}</div><div class="standing-name" style="color:${r.color}">${r.name}</div><div class="standing-bar-wrap"><div class="standing-bar" style="width:${pct}%;background:${r.barColor}"></div></div><div class="standing-pts" style="color:${r.color}">${r.stats.pts} pts</div><div class="standing-money">${r.money.soldTotal>0?fmtMoney(r.money.soldTotal):'—'}</div>`;standings.appendChild(row);});
   el.appendChild(standings);
-  const ytdAgents=buildYTDAgents(ytd.weeks);
   const lbWrap=document.createElement('div');lbWrap.style.cssText='margin-top:12px;border-radius:10px;border:1px solid #e2e0d8;overflow:hidden;background:#fff';
   const lbHdrTop=document.createElement('div');lbHdrTop.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#fafaf8;border-bottom:1px solid #e2e0d8;cursor:pointer;user-select:none';
   lbHdrTop.innerHTML='<div class="ytd-section-title" style="margin:0;border:none;padding:0">YTD Agent Leaderboard</div><span id="ytd-lb-toggle" style="font-size:11px;color:#888780">▼ Show</span>';
@@ -1256,7 +1251,7 @@ function renderYTD(){
   const lbHdrBottom=document.createElement('div');lbHdrBottom.style.cssText='display:none;align-items:center;justify-content:center;padding:8px 14px;background:#fafaf8;border-top:1px solid #e2e0d8;cursor:pointer;user-select:none';
   lbHdrBottom.innerHTML='<span style="font-size:11px;color:#888780">▲ Hide YTD Agent Leaderboard</span>';
   let lbOpen=false,lbBuilt=false;
-  function toggleLb(){lbOpen=!lbOpen;lbBoard.style.display=lbOpen?'block':'none';lbHdrBottom.style.display=lbOpen?'flex':'none';document.getElementById('ytd-lb-toggle').textContent=lbOpen?'▲ Hide':'▼ Show';if(lbOpen&&!lbBuilt){renderYTDAgentLeaderboard('ytd-agent-board',ytdAgents,ytd.weeks);lbBuilt=true;}}
+  function toggleLb(){lbOpen=!lbOpen;lbBoard.style.display=lbOpen?'block':'none';lbHdrBottom.style.display=lbOpen?'flex':'none';document.getElementById('ytd-lb-toggle').textContent=lbOpen?'▲ Hide':'▼ Show';if(lbOpen&&!lbBuilt){renderYTDAgentLeaderboard('ytd-agent-board',ytdAgents,weeksToUse);lbBuilt=true;}}
   lbHdrTop.addEventListener('click',toggleLb);lbHdrBottom.addEventListener('click',toggleLb);
   lbWrap.appendChild(lbHdrTop);lbWrap.appendChild(lbBoard);lbWrap.appendChild(lbHdrBottom);
   el.appendChild(lbWrap);
