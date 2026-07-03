@@ -635,11 +635,6 @@ const STRIP_FROM_JOINT=['donna mahoney','simon verkaik','lynne pinette','lorna g
 // Works no matter how the name is capitalized in the report. Also used to fold an
 // individual's deals into a team name (e.g. Marge Squire -> Rogers Realty Team).
 const AGENT_ALIASES={
-  'tim driscoll':'Foss & Russell Group',
-  'kate foss':'Foss & Russell Group',
-  'jennifer russell':'Foss & Russell Group',
-  'tim driscoll-foss & russell group':'Foss & Russell Group',
-  'tim driscoll-foss & russell':'Foss & Russell Group',
   'jill colby re':'Jill Colby Re',
   'michelle daoust':"Michelle D'Aoust",
   'erica dissel':'Erica Van Dissel',
@@ -648,10 +643,6 @@ const AGENT_ALIASES={
   'susan haberstroh & paul hamblett':'Sue Haberstroh',
   'sue haberstroh':'Sue Haberstroh',
   'michael perry':'Mike Perry',
-  'marge squire':'Rogers Realty Team',
-  'marjorie squire':'Rogers Realty Team',
-  'catherine rogers':'Rogers Realty Team',
-  'hillary rogers':'Rogers Realty Team',
   'reginald eld':'Reggie Eld',
   'reginald s eld':'Reggie Eld',
   'anthony ducharme':'Tony Ducharme',
@@ -663,6 +654,24 @@ const AGENT_ALIASES={
   'michael mullett':'Mike Mullett',
   'shayne lopriore':'Shayna LoPriore',
 };
+
+// FUZZY_PATTERNS: if a name matches one of these tests, it resolves to the canonical name
+// regardless of spelling, punctuation, extra words, or typos anywhere in the string.
+// Add new patterns here as needed — no other code needs to change.
+const FUZZY_PATTERNS=[
+  {test:n=>n.includes('foss')&&(n.includes('russell')||n.includes('russel')), canonical:'Foss & Russell Group'},
+  {test:n=>n.includes('tim driscoll'), canonical:'Foss & Russell Group'},
+  {test:n=>n.includes('kate foss'), canonical:'Foss & Russell Group'},
+  {test:n=>n.includes('jennifer russell'), canonical:'Foss & Russell Group'},
+  {test:n=>(n.includes('marge')||n.includes('marjorie'))&&n.includes('squire'), canonical:'Rogers Realty Team'},
+  {test:n=>(n.includes('hilary')||n.includes('hillary'))&&n.includes('rogers'), canonical:'Rogers Realty Team'},
+  {test:n=>(n.includes('kathryn')||n.includes('katherine')||n.includes('cathrin')||n.includes('catherine'))&&n.includes('rogers'), canonical:'Rogers Realty Team'},
+];
+function fuzzyResolve(name){
+  const lc=name.toLowerCase();
+  for(const p of FUZZY_PATTERNS)if(p.test(lc))return p.canonical;
+  return null;
+}
 
 // AGENT_REGION_OVERRIDES: forces a person/team to always count under one region,
 // no matter which office happens to be typed on that row.
@@ -685,17 +694,23 @@ function stripJointNames(name){
 }
 
 // cleanAgentName: the single entry point used wherever an agent name is read off a pasted row.
-// 1) Exact alias match on the whole string (handles tricky compound cases like
-//    "Kathryn & Linda Early" or "Susan Haberstroh & Paul Hamblett").
-// 2) Otherwise, strip any co-listed excluded names, then alias-resolve whatever's left.
+// 1) Fuzzy pattern match (catches typos, compound names like "Tim Driscoll - Foss & Russell").
+// 2) Exact alias match on the whole string (handles tricky compound cases).
+// 3) Otherwise, strip any co-listed excluded names, then alias-resolve whatever's left.
 function cleanAgentName(raw){
   let name=(raw||'').trim();
   if(!name)return name;
+  const fuzzy=fuzzyResolve(name);
+  if(fuzzy)return fuzzy;
   const directKey=agentKey(name);
   if(AGENT_ALIASES[directKey])return AGENT_ALIASES[directKey];
   const stripped=stripJointNames(name);
   if(stripped==='')return'';
-  if(stripped!==name){const k2=agentKey(stripped);return AGENT_ALIASES[k2]||stripped;}
+  if(stripped!==name){
+    const fuzzy2=fuzzyResolve(stripped);
+    if(fuzzy2)return fuzzy2;
+    const k2=agentKey(stripped);return AGENT_ALIASES[k2]||stripped;
+  }
   return name;
 }
 function agentKey(name){return(name||'').toLowerCase().trim().replace(/\s+/g,' ');}
@@ -878,7 +893,11 @@ function buildYTDAgents(weeks,filterRegionId){
     Object.entries(week.weekDeals||{}).forEach(([dk,d])=>{
       const ak=agentKey(d.name);if(!agentMeta[ak])agentMeta[ak]={name:d.name,office:d.office,regionId:getRegionIdForAgent(d.name,d.office)};
       if(!agentPts[ak])agentPts[ak]=0;if(!agentWeeklyPts[ak])agentWeeklyPts[ak]=new Array(weeks.length).fill(0);
-      if(!registry[dk]&&['CLOSED','PEND','NEW'].includes(d.status)){registry[dk]={agentKey:ak,weekIdx:wi,firstStatus:d.status};agentPts[ak]+=1;weekNewPts[ak]=(weekNewPts[ak]||0)+1;}
+      if(!registry[dk]&&['CLOSED','PEND','NEW'].includes(d.status)){
+        const isBoth=d.notes&&d.notes.includes('both sides');
+        registry[dk]={agentKey:ak,weekIdx:wi,firstStatus:d.status};agentPts[ak]+=1;weekNewPts[ak]=(weekNewPts[ak]||0)+1;
+        if(isBoth){const dk2=dk+'__buyside';registry[dk2]={agentKey:ak,weekIdx:wi,firstStatus:d.status,_skipSide:true};agentPts[ak]+=1;weekNewPts[ak]=(weekNewPts[ak]||0)+1;}
+      }
     });
     Object.values(week.agents||{}).forEach(a=>{
       if(!a.buyer)return;const ak=agentKey(a.name);if(!agentMeta[ak])agentMeta[ak]={name:a.name,office:a.office,regionId:getRegionIdForAgent(a.name,a.office)};
@@ -891,14 +910,16 @@ function buildYTDAgents(weeks,filterRegionId){
   weeks.forEach(week=>{Object.entries(week.weekDeals||{}).forEach(([dk,d])=>{dealCurrentStatus[dk]=d.status;dealSideInfo[dk]={isBoth:d.notes.includes('both sides'),isListSide:d.notes.includes('list side')||d.notes.includes('both sides'),isBuySide:d.notes.includes('buy side')||d.notes.includes('both sides')};dealPrices[dk]={listP:d.listP||0,soldP:d.soldP||0};});});
   const agentTruth={};Object.keys(agentMeta).forEach(ak=>{agentTruth[ak]={listings:0,pendings:0,closings:0,withdrawn:0,terminated:0,fallThru:0,listSideListings:0,everListSide:0,pendList:0,pendBuy:0,pendBoth:0,closedList:0,closedBuy:0,closedBoth:0,listedVal:0,pipelineVal:0,closedVal:0};});
   Object.entries(registry).forEach(([dk,info])=>{
+    if(info._skipSide)return;
     const ak=info.agentKey;if(!agentTruth[ak])return;const st=dealCurrentStatus[dk]||info.firstStatus;const si=dealSideInfo[dk]||{};const pr=dealPrices[dk]||{listP:0,soldP:0};
-    if(si.isListSide||si.isBoth)agentTruth[ak].everListSide++;
-    if(st==='NEW'){agentTruth[ak].listings++;agentTruth[ak].listedVal+=pr.listP;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings++;}
-    else if(st==='PEND'){agentTruth[ak].pendings++;agentTruth[ak].pipelineVal+=pr.listP;if(si.isBoth)agentTruth[ak].pendBoth++;else if(si.isListSide)agentTruth[ak].pendList++;else if(si.isBuySide)agentTruth[ak].pendBuy++;}
-    else if(st==='CLOSED'){agentTruth[ak].closings++;agentTruth[ak].closedVal+=pr.soldP||pr.listP;if(si.isBoth)agentTruth[ak].closedBoth++;else if(si.isListSide)agentTruth[ak].closedList++;else if(si.isBuySide)agentTruth[ak].closedBuy++;}
-    else if(st==='WITHDRAWN'){agentTruth[ak].withdrawn++;agentTruth[ak].listedVal+=pr.listP;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings++;}
-    else if(st==='TERMINATED'){agentTruth[ak].terminated++;agentTruth[ak].listedVal+=pr.listP;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings++;}
-    else if(st==='FALL THRU'){agentTruth[ak].fallThru++;}
+    const count=si.isBoth?2:1;
+    if(si.isListSide||si.isBoth)agentTruth[ak].everListSide+=count;
+    if(st==='NEW'){agentTruth[ak].listings+=count;agentTruth[ak].listedVal+=pr.listP*count;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings+=count;}
+    else if(st==='PEND'){agentTruth[ak].pendings+=count;agentTruth[ak].pipelineVal+=pr.listP*count;if(si.isBoth)agentTruth[ak].pendBoth+=1;else if(si.isListSide)agentTruth[ak].pendList+=1;else if(si.isBuySide)agentTruth[ak].pendBuy+=1;}
+    else if(st==='CLOSED'){agentTruth[ak].closings+=count;agentTruth[ak].closedVal+=(pr.soldP||pr.listP)*count;if(si.isBoth)agentTruth[ak].closedBoth+=1;else if(si.isListSide)agentTruth[ak].closedList+=1;else if(si.isBuySide)agentTruth[ak].closedBuy+=1;}
+    else if(st==='WITHDRAWN'){agentTruth[ak].withdrawn+=count;agentTruth[ak].listedVal+=pr.listP*count;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings+=count;}
+    else if(st==='TERMINATED'){agentTruth[ak].terminated+=count;agentTruth[ak].listedVal+=pr.listP*count;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings+=count;}
+    else if(st==='FALL THRU'){agentTruth[ak].fallThru+=count;}
   });
   const result={};Object.keys(agentMeta).forEach(ak=>{if(filterRegionId&&agentMeta[ak].regionId!==filterRegionId)return;result[ak]={...agentMeta[ak],points:agentPts[ak]||0,truth:{...agentTruth[ak],buyer:agentBuyer[ak]||0},weeklyPts:agentWeeklyPts[ak]||[]};});
   return result;
