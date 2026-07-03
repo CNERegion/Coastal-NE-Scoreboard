@@ -1188,26 +1188,16 @@ function renderWeeksLoaded(){
   const container=document.getElementById('weeks-loaded-box');if(!container)return;container.innerHTML='';
   const weeks=_ytdData.weeks||[];if(!weeks.length){container.style.display='none';return;}
   container.style.display='block';
-  // Collapsible header
-  let open=false;
-  const wrap=document.createElement('div');wrap.style.cssText='border:1px solid #e2e0d8;border-radius:10px;overflow:hidden;background:#fff;margin-bottom:0';
-  const hdr=document.createElement('div');hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#fafaf8;cursor:pointer;user-select:none;border-bottom:1px solid transparent';
-  const titleEl=document.createElement('div');titleEl.style.cssText='font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#5F5E5A';titleEl.textContent='Weeks Loaded';
-  const countEl=document.createElement('span');countEl.style.cssText='font-size:11px;color:#888780;background:#f0eeea;padding:1px 8px;border-radius:10px;margin-left:8px';countEl.textContent=weeks.length+' weeks';
-  const toggleEl=document.createElement('span');toggleEl.style.cssText='font-size:11px;color:#888780';toggleEl.textContent='▼ Show';
-  const left=document.createElement('div');left.style.display='flex';left.style.alignItems='center';left.appendChild(titleEl);left.appendChild(countEl);
-  hdr.appendChild(left);hdr.appendChild(toggleEl);
-  const body=document.createElement('div');body.style.display='none';body.style.padding='4px 0';
-  hdr.addEventListener('click',function(){
-    open=!open;body.style.display=open?'block':'none';
-    toggleEl.textContent=open?'▲ Hide':'▼ Show';
-    hdr.style.borderBottomColor=open?'#e2e0d8':'transparent';
-  });
+  const wrap=document.createElement('div');wrap.className='ytd-weeks-box';wrap.style.marginBottom='0';
+  const hdr=document.createElement('div');hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#fafaf8;border-bottom:1px solid #e2e0d8;border-radius:8px 8px 0 0';
+  hdr.innerHTML=`<span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#5F5E5A">Weeks Loaded</span><span style="font-size:11px;color:#888780;background:#f0eeea;padding:1px 8px;border-radius:10px">${weeks.length} weeks</span>`;
+  const body=document.createElement('div');body.style.cssText='max-height:160px;overflow-y:auto;border-radius:0 0 8px 8px;border:1px solid #e2e0d8;border-top:none';
   const sortedWeeks=[...weeks].sort((a,b)=>labelToDate(a)-labelToDate(b));_ytdData.weeks=sortedWeeks;
-  sortedWeeks.forEach((w,i)=>{
+  [...sortedWeeks].reverse().forEach((w,i)=>{
+    const weekNum=sortedWeeks.indexOf(w)+1;
     const sold=(w.deals||[]).filter(d=>d.status==='CLOSED').reduce((s,d)=>s+d.soldP,0);
     const pts=Object.values(w.agents||{}).reduce((s,a)=>s+weeklyScore(a),0);
-    const published=isPublished(w);const weekNum=i+1;
+    const published=isPublished(w);
     const row=document.createElement('div');row.className='ytd-week-row';
     row.innerHTML=`<span style="color:#5F5E5A;flex:1"><strong style="color:#534AB7">Wk ${weekNum}</strong> · ${w.label} ${published?'<span style="font-size:10px;background:#E1F5EE;color:#0F6E56;padding:1px 6px;border-radius:10px;margin-left:4px">Live</span>':'<span style="font-size:10px;background:#FAEEDA;color:#854F0B;padding:1px 6px;border-radius:10px;margin-left:4px">Pending</span>'}</span><span style="display:flex;gap:12px;align-items:center"><span style="color:#1D9E75;font-weight:500">${pts} pts</span><span style="color:#0F6E56;font-weight:500;min-width:50px;text-align:right">${sold>0?fmtMoney(sold):'—'}</span><button data-label="${w.label.replace(/"/g,'&quot;')}" style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid #F7C1C1;background:#FCEBEB;color:#A32D2D;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">✕ delete</button></span>`;
     const btn=row.querySelector('button');
