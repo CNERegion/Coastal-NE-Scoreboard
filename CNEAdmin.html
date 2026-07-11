@@ -277,6 +277,16 @@
     #week-nav-bar > div { padding:6px 8px; gap:5px; }
     #week-nav-bar select { font-size:11px; }
   }
+  .ticker-wrap{width:100%;overflow:hidden;padding:0;border-radius:8px;}
+  .ticker-inner{display:flex;align-items:center;height:36px;}
+  .ticker-label{flex-shrink:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:0 12px;height:100%;display:flex;align-items:center;white-space:nowrap;}
+  .ticker-track{flex:1;overflow:hidden;height:100%;display:flex;align-items:center;position:relative;}
+  .ticker-move{display:flex;white-space:nowrap;width:max-content;}
+  .ticker-move.is-animating{animation:ticker-scroll linear infinite;}
+  .ticker-move:hover{animation-play-state:paused;}
+  .ticker-seg{display:inline-flex;align-items:center;white-space:nowrap;font-size:13px;font-weight:500;padding-right:56px;}
+  @keyframes ticker-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+  @media(max-width:480px){.ticker-seg{font-size:12px;padding-right:36px;}.ticker-label{font-size:10px;padding:0 8px;}}
 </style>
 </head>
 <body>
@@ -316,6 +326,24 @@
     <span class="preview-close" onclick="exitPreview()">Exit preview</span>
   </div>
 
+  <!-- ── ANNOUNCEMENTS MANAGER (date/time-range, independent of week label) ── -->
+  <div style="margin-bottom:1.25rem;border:1px solid #e2e0d8;border-radius:10px;overflow:hidden;">
+    <div style="background:#fafaf8;padding:8px 14px;border-bottom:1px solid #e2e0d8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#5F5E5A">
+      📢 Announcements Manager
+      <span style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0;color:#aaa9a2">— runs on its own start/end date, independent of week data. Leave "runs from" blank to start immediately, leave "until" blank to never expire. Edit or delete anytime.</span>
+    </div>
+    <div id="announcements-manager-body" style="padding:12px 14px;display:flex;flex-direction:column;gap:14px;"></div>
+  </div>
+
+  <!-- ── SPECIAL KUDOS MANAGER (hand-picked recognition, alongside the auto-computed kudos) ── -->
+  <div style="margin-bottom:1.25rem;border:1px solid #e2e0d8;border-radius:10px;overflow:hidden;">
+    <div style="background:#fafaf8;padding:8px 14px;border-bottom:1px solid #e2e0d8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#5F5E5A">
+      🌟 Special Kudos Manager
+      <span style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0;color:#aaa9a2">— for recognition outside the automatic categories (anniversaries, great saves, anything). Shows in its own region's tab and in Regional Summary. Runs on its own date range like Announcements, or leave blank to run indefinitely.</span>
+    </div>
+    <div id="kudos-manager-body" style="padding:12px 14px;display:flex;flex-direction:column;gap:14px;"></div>
+  </div>
+
   <!-- ── DATA ENTRY ── -->
   <div class="paste-section">
     <div class="paste-title">Load this week's data</div>
@@ -337,6 +365,7 @@
       <button class="btn btn-preview" onclick="previewPending()">👁 Preview Before Publish</button>
       <button class="btn btn-secondary" onclick="loadSampleData()">Load sample data</button>
       <button class="btn btn-secondary" onclick="syncAllWeeksToDrive()" style="background:#534AB7;color:#fff;border-color:#534AB7">☁️ Sync All Weeks to Drive</button>
+      <button class="btn btn-secondary" onclick="backfillDedupVolume()" style="background:#BA7517;color:#fff;border-color:#BA7517" title="One-time: recomputes the Highest-Volume kudos figure for every saved week from data already on file">🔧 Backfill Kudos Volume (one-time)</button>
       <button class="btn btn-secondary" onclick="exportDataAsJSON()" style="background:#0F6E56;color:#fff;border-color:#0F6E56">⬇️ Export Data as JSON</button>
       <button class="btn btn-danger" onclick="clearAllData()">Clear all YTD data</button>
     </div>
@@ -367,6 +396,7 @@
   </div>
 
   <div id="week-nav-bar" style="display:none;margin-bottom:1.25rem;"></div>
+  <div id="announcements-wrap" style="margin-bottom:8px;display:flex;flex-direction:column;gap:6px;"></div>
 
   <div class="section active" id="tab-summary"><div id="summary-content"></div></div>
   <div class="section" id="tab-seacoast"><div id="seacoast-content"></div></div>
@@ -381,9 +411,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 const MY_OFFICES=['exeter','portsmouth','andover','bradford','haverhill','methuen','newburyport','saco','biddeford','kennebunk'];
 const REGIONS=[
-{id:'seacoast',name:'Seacoast NH', offices:['exeter','portsmouth'], label:'Exeter · Portsmouth', color:'#185FA5',bg:'#E6F1FB',barColor:'#378ADD'},
-{id:'ma', name:'Massachusetts',offices:['andover','bradford','haverhill','methuen','newburyport'],label:'Andover · Haverhill · Methuen · Newburyport',color:'#993556',bg:'#FBEAF0',barColor:'#ED93B1'},
-{id:'maine', name:'Maine', offices:['saco','biddeford','kennebunk'], label:'Biddeford · Kennebunk', color:'#0F6E56',bg:'#E1F5EE',barColor:'#5DCAA5'},
+  {id:'seacoast',name:'Seacoast NH',  offices:['exeter','portsmouth'],                                   label:'Exeter · Portsmouth',                       color:'#185FA5',bg:'#E6F1FB',barColor:'#378ADD'},
+  {id:'ma',      name:'Massachusetts',offices:['andover','bradford','haverhill','methuen','newburyport'],label:'Andover · Haverhill · Methuen · Newburyport',color:'#993556',bg:'#FBEAF0',barColor:'#ED93B1'},
+  {id:'maine',   name:'Maine',        offices:['saco','biddeford','kennebunk'],                           label:'Biddeford · Kennebunk',                     color:'#0F6E56',bg:'#E1F5EE',barColor:'#5DCAA5'},
 ];
 const AVATAR_COLORS=[
   {bg:'#E1F5EE',color:'#0F6E56'},{bg:'#E6F1FB',color:'#185FA5'},
@@ -468,7 +498,7 @@ function syncAllWeeksToDrive(){
     return;
   }
   setDriveStatus('Syncing '+_ytdData.weeks.length+' weeks to Drive...','info');
-  writeToDrive({weeks:_ytdData.weeks})
+  writeToDrive({weeks:_ytdData.weeks,announcements:_announcementsStore,specialKudos:_specialKudosStore})
     .then(function(){
       setDriveStatus('✅ All '+_ytdData.weeks.length+' weeks synced to Drive successfully!','ok');
     })
@@ -477,11 +507,38 @@ function syncAllWeeksToDrive(){
     });
 }
 
+// One-time backfill: recomputes the deduped combined-volume figure
+// (dedupVolume) for every already-saved week, using that week's own
+// already-stored weekDeals -- no need to re-paste any original data.
+// Only touches the new dedupVolume field; every existing count/total
+// (New Listings, Pending, Closed, points, etc) is left completely alone.
+function backfillDedupVolume(){
+  if(!confirm('Recompute the Highest-Volume figure for every saved week using data already on file? This only affects the new Kudos volume figure -- no other stats are touched.'))return;
+  setMsg('Backfilling deduped volume for all weeks…','#185FA5');
+  readFromDrive()
+    .then(function(existing){
+      const weeks=existing.weeks||[];
+      if(!weeks.length){setMsg('No weeks found to backfill.','#A32D2D');return Promise.reject('none');}
+      weeks.forEach(function(w){
+        if(!w.agents)return;
+        applyDedupVolume(w.weekDeals||{},w.agents);
+      });
+      return writeToDrive({weeks:weeks,announcements:_announcementsStore,specialKudos:_specialKudosStore}).then(function(){return weeks;});
+    })
+    .then(function(weeks){
+      _ytdData={weeks:weeks,announcements:_announcementsStore,specialKudos:_specialKudosStore};
+      setMsg('✓ Backfilled deduped volume for '+weeks.length+' week'+(weeks.length!==1?'s':'')+'.','#1D9E75');
+    })
+    .catch(function(e){
+      if(e!=='none')setMsg('✗ Backfill failed: '+e.message,'#A32D2D');
+    });
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // GOOGLE DRIVE READ / WRITE
 // ═══════════════════════════════════════════════════════════════════════════════
 function readFromDrive(){
-  return fetch('https://script.google.com/macros/s/AKfycbxuZkW3zkNbcGYE3rrjq_q3HiF4Fv4GDZQ5qByvJfqay0C0ii7kzNKETccx2r4Amwz3/exec',{cache:'no-store'})
+  return fetch('https://script.google.com/macros/s/AKfycbzuf0dhdV1PiQnOiD4O4OPe--OY2XZ2H6baQzk1jrDLW-4NMYpjFyMkm0c9WiXTv0B8/exec',{cache:'no-store'})
     .then(function(res){
       if(!res.ok) throw new Error('HTTP '+res.status);
       return res.text();
@@ -493,7 +550,7 @@ function readFromDrive(){
 }
 
 function writeToDrive(data){
-  return fetch('https://script.google.com/macros/s/AKfycbxuZkW3zkNbcGYE3rrjq_q3HiF4Fv4GDZQ5qByvJfqay0C0ii7kzNKETccx2r4Amwz3/exec', {
+  return fetch('https://script.google.com/macros/s/AKfycbzuf0dhdV1PiQnOiD4O4OPe--OY2XZ2H6baQzk1jrDLW-4NMYpjFyMkm0c9WiXTv0B8/exec', {
     method: 'POST',
     mode: 'no-cors',
     headers: {'Content-Type': 'text/plain'},
@@ -615,6 +672,104 @@ function parseTSV(text){
 }
 function inRegion(office){return MY_OFFICES.includes((office||'').toLowerCase().trim());}
 function getRegionId(office){const o=(office||'').toLowerCase().trim();for(const r of REGIONS)if(r.offices.includes(o))return r.id;return null;}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AGENT NAME RULES
+// To add a new rule, just add one line below in the matching list — no other
+// code needs to change. Keys are always lowercase; spelling/spacing of the
+// name as typed in the report doesn't matter (it gets normalized automatically).
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// EXCLUDED_AGENTS: this person's SOLO transactions (no co-agent on the row) are dropped entirely.
+const EXCLUDED_AGENTS=['donna mahoney','simon verkaik','lynne pinette','lorna gagnon','linda early'];
+function isExcluded(name){return EXCLUDED_AGENTS.includes((name||'').toLowerCase().trim());}
+
+// STRIP_FROM_JOINT: when this person's name appears ALONGSIDE another name on the same row
+// (e.g. "Linda Early/ Kathryn Early"), their name is dropped and only the other name is kept.
+const STRIP_FROM_JOINT=['donna mahoney','simon verkaik','lynne pinette','lorna gagnon','linda early'];
+
+// AGENT_ALIASES: rewrites any of these spellings/variants to the one canonical name on the right.
+// Works no matter how the name is capitalized in the report. Also used to fold an
+// individual's deals into a team name (e.g. Marge Squire -> Rogers Realty Team).
+const AGENT_ALIASES={
+  'jill colby re':'Jill Colby Re',
+  'michelle daoust':"Michelle D'Aoust",
+  'erica dissel':'Erica Van Dissel',
+  'erica van dissel':'Erica Van Dissel',
+  'susan haberstroh':'Sue Haberstroh',
+  'susan haberstroh & paul hamblett':'Sue Haberstroh',
+  'sue haberstroh':'Sue Haberstroh',
+  'michael perry':'Mike Perry',
+  'reginald eld':'Reggie Eld',
+  'reginald s eld':'Reggie Eld',
+  'anthony ducharme':'Tony Ducharme',
+  'anthony salerno':'Tony Salerno',
+  'katherin early':'Kathryn Early',
+  'kathryn & linda early':'Kathryn Early',
+  'linda early/ kathryn ealry':'Kathryn Early',
+  'linda early/ kathryn early':'Kathryn Early',
+  'michael mullett':'Mike Mullett',
+  'shayne lopriore':'Shayna LoPriore',
+};
+
+// FUZZY_PATTERNS: if a name matches one of these tests, it resolves to the canonical name
+// regardless of spelling, punctuation, extra words, or typos anywhere in the string.
+// Add new patterns here as needed — no other code needs to change.
+const FUZZY_PATTERNS=[
+  {test:n=>n.includes('foss')&&(n.includes('russell')||n.includes('russel')), canonical:'Foss & Russell Group'},
+  {test:n=>n.includes('tim driscoll'), canonical:'Foss & Russell Group'},
+  {test:n=>n.includes('kate foss'), canonical:'Foss & Russell Group'},
+  {test:n=>n.includes('jennifer russell'), canonical:'Foss & Russell Group'},
+  {test:n=>(n.includes('marge')||n.includes('marjorie'))&&n.includes('squire'), canonical:'Rogers Realty Team'},
+  {test:n=>(n.includes('hilary')||n.includes('hillary'))&&n.includes('rogers'), canonical:'Rogers Realty Team'},
+  {test:n=>(n.includes('kathryn')||n.includes('katherine')||n.includes('cathrin')||n.includes('catherine'))&&n.includes('rogers'), canonical:'Rogers Realty Team'},
+];
+function fuzzyResolve(name){
+  const lc=name.toLowerCase();
+  for(const p of FUZZY_PATTERNS)if(p.test(lc))return p.canonical;
+  return null;
+}
+
+// AGENT_REGION_OVERRIDES: forces a person/team to always count under one region,
+// no matter which office happens to be typed on that row.
+const AGENT_REGION_OVERRIDES={'foss & russell group':'seacoast','jill colby re':'seacoast'};
+function getRegionIdForAgent(name,office){const ak=agentKey(name);if(AGENT_REGION_OVERRIDES[ak])return AGENT_REGION_OVERRIDES[ak];return getRegionId(office);}
+
+function resolveAgentName(name){const ak=agentKey(name);return AGENT_ALIASES[ak]||name;}
+
+// stripJointNames: splits a joint name on common separators (&, /, "and", comma) and removes
+// any token that exactly matches someone in STRIP_FROM_JOINT, keeping whoever's left.
+// If nothing in the name matches the strip list, the original string is returned untouched
+// (so genuine team names like "Foss & Russell Group" are never accidentally split apart).
+function stripJointNames(name){
+  const parts=name.split(/\s*(?:&|\/|,| and )\s*/i).map(p=>p.trim()).filter(Boolean);
+  if(parts.length<2)return name;
+  const kept=parts.filter(p=>!STRIP_FROM_JOINT.includes(agentKey(p)));
+  if(kept.length===parts.length)return name;
+  if(!kept.length)return'';
+  return kept.join(' & ');
+}
+
+// cleanAgentName: the single entry point used wherever an agent name is read off a pasted row.
+// 1) Fuzzy pattern match (catches typos, compound names like "Tim Driscoll - Foss & Russell").
+// 2) Exact alias match on the whole string (handles tricky compound cases).
+// 3) Otherwise, strip any co-listed excluded names, then alias-resolve whatever's left.
+function cleanAgentName(raw){
+  let name=(raw||'').trim();
+  if(!name)return name;
+  const fuzzy=fuzzyResolve(name);
+  if(fuzzy)return fuzzy;
+  const directKey=agentKey(name);
+  if(AGENT_ALIASES[directKey])return AGENT_ALIASES[directKey];
+  const stripped=stripJointNames(name);
+  if(stripped==='')return'';
+  if(stripped!==name){
+    const fuzzy2=fuzzyResolve(stripped);
+    if(fuzzy2)return fuzzy2;
+    const k2=agentKey(stripped);return AGENT_ALIASES[k2]||stripped;
+  }
+  return name;
+}
 function agentKey(name){return(name||'').toLowerCase().trim().replace(/\s+/g,' ');}
 function weeklyScore(a){return(a.closed||0)+(a.pend||0)+(a.newL||0)+(a.buyer||0);}
 function initials(name){const p=(name||'').trim().split(/\s+/);return p.length===1?p[0].substring(0,2).toUpperCase():(p[0][0]+p[p.length-1][0]).toUpperCase();}
@@ -623,9 +778,6 @@ function fmtMoney(n){if(n>=1000000)return'$'+(n/1000000).toFixed(2)+'M';if(n>=10
 function fmtPct(n){return n.toFixed(1)+'%';}
 function sideBreakdown(l,b,bo){const p=[];if(l)p.push(`${l} list side`);if(b)p.push(`${b} buy side`);if(bo)p.push(`${bo} both sides`);return p.length?' · '+p.join(' / '):''}
 function dealKey(mls,name,addr,town,weekLabel){const m=(mls||'').trim().toUpperCase();if(m&&m!=='NON-MLS'&&m!=='')return'MLS:'+m;return'NONMLS:'+agentKey(name)+':'+((addr||'').toLowerCase().trim())+':'+((town||'').toLowerCase().trim())+':'+weekLabel;}
-
-const EXCLUDED_AGENTS=['donna mahoney','simon verkaik'];
-function isExcluded(name){return EXCLUDED_AGENTS.includes((name||'').toLowerCase().trim());}
 
 // Strip excluded agents from all historical week data before any rendering touches it
 function sanitizeWeekData(weeks){
@@ -640,7 +792,7 @@ function parseTransactions(tsv,weekLabel){
   const rows=parseTSV(tsv);const agents={};const deals=[];const weekDeals={};
   rows.forEach(r=>{
     const office=r['office']||'';if(!inRegion(office))return;
-    const status=(r['status']||'').toUpperCase().trim();const name=(r['agent name']||'').trim();
+    const status=(r['status']||'').toUpperCase().trim();const name=cleanAgentName(r['agent name']);
     if(!name||!status)return;
     if(isExcluded(name))return;
     const mls=r['mls#']||r['mls']||'';
@@ -664,38 +816,107 @@ function parseTransactions(tsv,weekLabel){
     }
     const rank=STATUS_RANK[status]||0;
     if(!weekDeals[dk]||rank>(STATUS_RANK[weekDeals[dk].status]||0)){
-      weekDeals[dk]={status,name,office,mls:mls.trim(),addr:r['address']||'',town:r['town']||'',notes:notes,listP:parseMoney(r['list price']),soldP:parseMoney(r['sold price']),date:r['timestamp']||r['notes']||'',regionId:getRegionId(office),dk};
+      weekDeals[dk]={status,name,office,mls:mls.trim(),addr:r['address']||'',town:r['town']||'',notes:notes,listP:parseMoney(r['list price']),soldP:parseMoney(r['sold price']),date:r['timestamp']||r['notes']||'',regionId:getRegionIdForAgent(name,office),dk};
     }
   });
+  pruneSupersededDeals(weekDeals);
   Object.values(weekDeals).forEach(d=>{
     const{status,name,office,notes,listP,soldP,dk}=d;
     const isBoth=notes.includes('both sides');const isListSide=notes.includes('list side')||isBoth;const isBuySide=notes.includes('buy side')||isBoth;
-    const count=isBoth?2:1;const key=agentKey(name);const regionId=getRegionId(office);
+    const count=isBoth?2:1;const key=agentKey(name);const regionId=getRegionIdForAgent(name,office);
     if(!agents[key])agents[key]={name,office,regionId,closed:0,closedList:0,closedBuy:0,closedBoth:0,closedVal:0,pend:0,pendList:0,pendBuy:0,pendBoth:0,pendVal:0,newL:0,newLVal:0,buyer:0,buyerAgency:0,showing:0,facilitator:0,withdrawn:0};
     if(status==='CLOSED'){agents[key].closed+=count;agents[key].closedVal+=soldP||listP;if(isBoth)agents[key].closedBoth+=1;else if(isListSide)agents[key].closedList+=1;else if(isBuySide)agents[key].closedBuy+=1;}
     else if(status==='PEND'){agents[key].pend+=count;agents[key].pendVal+=listP;if(isBoth)agents[key].pendBoth+=1;else if(isListSide)agents[key].pendList+=1;else if(isBuySide)agents[key].pendBuy+=1;}
     else if(status==='NEW'){agents[key].newL+=count;agents[key].newLVal+=listP;}
     else if(status==='WITHDRAWN'||status==='TERMINATED'){agents[key].withdrawn+=1;}
-    else if(status==='FALL THRU'){agents[key].pend=Math.max(0,agents[key].pend-count);}
+    else if(status==='FALL THRU'){if(!d._sameWeekSupersede)agents[key].pend=Math.max(0,agents[key].pend-count);}
     if(['CLOSED','PEND','NEW'].includes(status))deals.push({status,regionId,listP,soldP,isBoth,count,dk});
   });
+  applyDedupVolume(weekDeals,agents);
   return{agents,deals,weekDeals};
+}
+
+// Separate combined-volume figure (New $ + Pending $ + Closed $ added
+// together) for things like "Highest Volume" kudos. This never touches
+// the per-status counts/totals -- New Listings, Pending, and Closed stay
+// exactly as they've always been, each fully credited on their own. It
+// only prevents double-counting a single property's price when the SAME
+// MLS# appears under more than one status in the same week (e.g. listed
+// AND went pending the same week) -- that property's value counts once,
+// at its most-advanced status, toward this combined figure only.
+// Standalone so it can also backfill already-saved weeks (using their
+// already-stored weekDeals) without needing to re-paste original data.
+function applyDedupVolume(weekDeals,agents){
+  Object.keys(agents).forEach(key=>{agents[key].dedupVolume=0;});
+  const bestByAgentMls={};
+  const nonMlsTotals={};
+  Object.values(weekDeals||{}).forEach(d=>{
+    if(!['CLOSED','PEND','NEW'].includes(d.status))return;
+    const key=agentKey(d.name);
+    if(!agents[key])return;
+    const m=(d.mls||'').trim().toUpperCase();
+    const value=d.status==='CLOSED'?(d.soldP||d.listP):d.listP;
+    const rank=STATUS_RANK[d.status]||0;
+    if(m&&m!=='NON-MLS'){
+      if(!bestByAgentMls[key])bestByAgentMls[key]={};
+      const existing=bestByAgentMls[key][m];
+      if(!existing||rank>existing.rank)bestByAgentMls[key][m]={rank,value};
+    }else{
+      nonMlsTotals[key]=(nonMlsTotals[key]||0)+value;
+    }
+  });
+  Object.keys(bestByAgentMls).forEach(key=>{
+    Object.values(bestByAgentMls[key]).forEach(entry=>{
+      agents[key].dedupVolume+=entry.value;
+    });
+  });
+  Object.keys(nonMlsTotals).forEach(key=>{
+    if(agents[key])agents[key].dedupVolume+=nonMlsTotals[key];
+  });
+  return agents;
+}
+
+// pruneSupersededDeals: if the same MLS# has both a PEND and a FALL THRU row in the same
+// week's report, the property didn't stay pending -- drop the stale PEND row (the FALL THRU
+// row itself stays visible in the Withdrawn/Fall Thru section, so nothing is hidden, just
+// de-duplicated). Same idea for a NEW listing that was also WITHDRAWN or TERMINATED that week.
+function pruneSupersededDeals(weekDeals){
+  const byMls={};
+  Object.entries(weekDeals).forEach(([dk,d])=>{
+    const m=(d.mls||'').trim().toUpperCase();
+    if(!m||m==='NON-MLS')return;
+    if(!byMls[m])byMls[m]=[];
+    byMls[m].push(dk);
+  });
+  Object.values(byMls).forEach(dks=>{
+    const fallThruKeys=dks.filter(dk=>weekDeals[dk].status==='FALL THRU');
+    const pendKeys=dks.filter(dk=>weekDeals[dk].status==='PEND');
+    if(fallThruKeys.length&&pendKeys.length){
+      pendKeys.forEach(dk=>delete weekDeals[dk]);
+      fallThruKeys.forEach(dk=>{weekDeals[dk]._sameWeekSupersede=true;});
+    }
+    const closedOutKeys=dks.filter(dk=>weekDeals[dk]&&['WITHDRAWN','TERMINATED'].includes(weekDeals[dk].status));
+    const newKeys=dks.filter(dk=>weekDeals[dk]&&weekDeals[dk].status==='NEW');
+    if(closedOutKeys.length&&newKeys.length){
+      newKeys.forEach(dk=>delete weekDeals[dk]);
+    }
+  });
 }
 
 function parseBuyers(tsv,agentMap){
   const rows=parseTSV(tsv);const buyerRows=[];
   rows.forEach(r=>{
     const office=r['office']||'';if(!inRegion(office))return;
-    const name=(r['agent name']||'').trim();if(!name)return;
+    const name=cleanAgentName(r['agent name']);if(!name)return;
     if(isExcluded(name))return;
-    const key=agentKey(name);const regionId=getRegionId(office);
+    const key=agentKey(name);const regionId=getRegionIdForAgent(name,office);
     if(!agentMap[key])agentMap[key]={name,office,regionId,closed:0,closedList:0,closedBuy:0,closedBoth:0,pend:0,pendList:0,pendBuy:0,pendBoth:0,newL:0,buyer:0,buyerAgency:0,showing:0,facilitator:0,withdrawn:0};
     agentMap[key].buyer+=1;
     const t=(r['type']||'').toLowerCase();let typeLabel='other';
     if(t.includes('agency')){agentMap[key].buyerAgency+=1;typeLabel='agency';}
     else if(t.includes('showing')){agentMap[key].showing+=1;typeLabel='showing';}
     else if(t.includes('facilitator')||t.includes('transactional')){agentMap[key].facilitator+=1;typeLabel='facilitator';}
-    buyerRows.push({name,office,regionId:getRegionId(office),typeLabel});
+    buyerRows.push({name,office,regionId:getRegionIdForAgent(name,office),typeLabel});
   });
   return{agentMap,buyerRows};
 }
@@ -726,10 +947,13 @@ function loadWeek(){
       var weekEntry={label:label,loadedAt:new Date().toISOString(),publishAt:publishAt,agents:agentMap,deals:deals,weekDeals:weekDeals,buyerRows:buyerRows};
       if(existingIdx>=0)weeks[existingIdx]=weekEntry;else weeks.push(weekEntry);
       weeks.sort(function(a,b){return new Date(a.loadedAt)-new Date(b.loadedAt);});
-      return writeToDrive({weeks:weeks}).then(function(){return weeks;});
+      // Announcements live independently of week data now — write the
+      // current store back alongside weeks so it isn't dropped, since the
+      // backend replaces the whole file on each write.
+      return writeToDrive({weeks:weeks,announcements:_announcementsStore,specialKudos:_specialKudosStore}).then(function(){return weeks;});
     })
     .then(function(weeks){
-      _ytdData={weeks:weeks};
+      _ytdData={weeks:weeks,announcements:_announcementsStore,specialKudos:_specialKudosStore};
       window._currentBuyerRows=buyerRows;
       document.getElementById('current-week-label').textContent='Saved: '+label;
       renderAll(agentMap,deals,weekDeals);
@@ -747,9 +971,9 @@ function loadWeek(){
 
 function clearAllData(){
   if(!confirm('Clear ALL weeks from Google Drive? This cannot be undone.'))return;
-  writeToDrive({weeks:[]})
+  writeToDrive({weeks:[],announcements:_announcementsStore,specialKudos:_specialKudosStore})
     .then(function(){
-      _ytdData={weeks:[]};
+      _ytdData={weeks:[],announcements:_announcementsStore,specialKudos:_specialKudosStore};
       renderAll({},{},[]);
       updatePublishStatusBar();
       renderWeeksLoaded();
@@ -768,12 +992,16 @@ function buildYTDAgents(weeks,filterRegionId){
   weeks.forEach((week,wi)=>{
     const weekNewPts={};
     Object.entries(week.weekDeals||{}).forEach(([dk,d])=>{
-      const ak=agentKey(d.name);if(!agentMeta[ak])agentMeta[ak]={name:d.name,office:d.office,regionId:getRegionId(d.office)};
+      const ak=agentKey(d.name);if(!agentMeta[ak])agentMeta[ak]={name:d.name,office:d.office,regionId:getRegionIdForAgent(d.name,d.office)};
       if(!agentPts[ak])agentPts[ak]=0;if(!agentWeeklyPts[ak])agentWeeklyPts[ak]=new Array(weeks.length).fill(0);
-      if(!registry[dk]&&['CLOSED','PEND','NEW'].includes(d.status)){registry[dk]={agentKey:ak,weekIdx:wi,firstStatus:d.status};agentPts[ak]+=1;weekNewPts[ak]=(weekNewPts[ak]||0)+1;}
+      if(!registry[dk]&&['CLOSED','PEND','NEW'].includes(d.status)){
+        const isBoth=d.notes&&d.notes.includes('both sides');
+        registry[dk]={agentKey:ak,weekIdx:wi,firstStatus:d.status};agentPts[ak]+=1;weekNewPts[ak]=(weekNewPts[ak]||0)+1;
+        if(isBoth){const dk2=dk+'__buyside';registry[dk2]={agentKey:ak,weekIdx:wi,firstStatus:d.status,_skipSide:true};agentPts[ak]+=1;weekNewPts[ak]=(weekNewPts[ak]||0)+1;}
+      }
     });
     Object.values(week.agents||{}).forEach(a=>{
-      if(!a.buyer)return;const ak=agentKey(a.name);if(!agentMeta[ak])agentMeta[ak]={name:a.name,office:a.office,regionId:getRegionId(a.office)};
+      if(!a.buyer)return;const ak=agentKey(a.name);if(!agentMeta[ak])agentMeta[ak]={name:a.name,office:a.office,regionId:getRegionIdForAgent(a.name,a.office)};
       if(!agentPts[ak])agentPts[ak]=0;if(!agentWeeklyPts[ak])agentWeeklyPts[ak]=new Array(weeks.length).fill(0);if(!agentBuyer[ak])agentBuyer[ak]=0;
       agentBuyer[ak]+=a.buyer;agentPts[ak]+=a.buyer;weekNewPts[ak]=(weekNewPts[ak]||0)+a.buyer;
     });
@@ -783,14 +1011,16 @@ function buildYTDAgents(weeks,filterRegionId){
   weeks.forEach(week=>{Object.entries(week.weekDeals||{}).forEach(([dk,d])=>{dealCurrentStatus[dk]=d.status;dealSideInfo[dk]={isBoth:d.notes.includes('both sides'),isListSide:d.notes.includes('list side')||d.notes.includes('both sides'),isBuySide:d.notes.includes('buy side')||d.notes.includes('both sides')};dealPrices[dk]={listP:d.listP||0,soldP:d.soldP||0};});});
   const agentTruth={};Object.keys(agentMeta).forEach(ak=>{agentTruth[ak]={listings:0,pendings:0,closings:0,withdrawn:0,terminated:0,fallThru:0,listSideListings:0,everListSide:0,pendList:0,pendBuy:0,pendBoth:0,closedList:0,closedBuy:0,closedBoth:0,listedVal:0,pipelineVal:0,closedVal:0};});
   Object.entries(registry).forEach(([dk,info])=>{
+    if(info._skipSide)return;
     const ak=info.agentKey;if(!agentTruth[ak])return;const st=dealCurrentStatus[dk]||info.firstStatus;const si=dealSideInfo[dk]||{};const pr=dealPrices[dk]||{listP:0,soldP:0};
-    if(si.isListSide||si.isBoth)agentTruth[ak].everListSide++;
-    if(st==='NEW'){agentTruth[ak].listings++;agentTruth[ak].listedVal+=pr.listP;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings++;}
-    else if(st==='PEND'){agentTruth[ak].pendings++;agentTruth[ak].pipelineVal+=pr.listP;if(si.isBoth)agentTruth[ak].pendBoth++;else if(si.isListSide)agentTruth[ak].pendList++;else if(si.isBuySide)agentTruth[ak].pendBuy++;}
-    else if(st==='CLOSED'){agentTruth[ak].closings++;agentTruth[ak].closedVal+=pr.soldP||pr.listP;if(si.isBoth)agentTruth[ak].closedBoth++;else if(si.isListSide)agentTruth[ak].closedList++;else if(si.isBuySide)agentTruth[ak].closedBuy++;}
-    else if(st==='WITHDRAWN'){agentTruth[ak].withdrawn++;agentTruth[ak].listedVal+=pr.listP;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings++;}
-    else if(st==='TERMINATED'){agentTruth[ak].terminated++;agentTruth[ak].listedVal+=pr.listP;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings++;}
-    else if(st==='FALL THRU'){agentTruth[ak].fallThru++;}
+    const count=si.isBoth?2:1;
+    if(si.isListSide||si.isBoth)agentTruth[ak].everListSide+=count;
+    if(st==='NEW'){agentTruth[ak].listings+=count;agentTruth[ak].listedVal+=pr.listP*count;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings+=count;}
+    else if(st==='PEND'){agentTruth[ak].pendings+=count;agentTruth[ak].pipelineVal+=pr.listP*count;if(si.isBoth)agentTruth[ak].pendBoth+=1;else if(si.isListSide)agentTruth[ak].pendList+=1;else if(si.isBuySide)agentTruth[ak].pendBuy+=1;}
+    else if(st==='CLOSED'){agentTruth[ak].closings+=count;agentTruth[ak].closedVal+=(pr.soldP||pr.listP)*count;if(si.isBoth)agentTruth[ak].closedBoth+=1;else if(si.isListSide)agentTruth[ak].closedList+=1;else if(si.isBuySide)agentTruth[ak].closedBuy+=1;}
+    else if(st==='WITHDRAWN'){agentTruth[ak].withdrawn+=count;agentTruth[ak].listedVal+=pr.listP*count;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings+=count;}
+    else if(st==='TERMINATED'){agentTruth[ak].terminated+=count;agentTruth[ak].listedVal+=pr.listP*count;if(si.isListSide||si.isBoth)agentTruth[ak].listSideListings+=count;}
+    else if(st==='FALL THRU'){agentTruth[ak].fallThru+=count;}
   });
   const result={};Object.keys(agentMeta).forEach(ak=>{if(filterRegionId&&agentMeta[ak].regionId!==filterRegionId)return;result[ak]={...agentMeta[ak],points:agentPts[ak]||0,truth:{...agentTruth[ak],buyer:agentBuyer[ak]||0},weeklyPts:agentWeeklyPts[ak]||[]};});
   return result;
@@ -804,7 +1034,7 @@ function calcRegionMoney(deals,regionId){
 
 function sidePill(notes){const n=(notes||'').toLowerCase();if(n.includes('both sides'))return`<span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#E1F5EE;color:#0F6E56">Both</span>`;if(n.includes('list side'))return`<span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#E6F1FB;color:#185FA5">List</span>`;if(n.includes('buy side'))return`<span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#EEEDFE;color:#534AB7">Buy</span>`;return'';}
 function toSlug(str){return(str||'').toLowerCase().replace(/[#\/]/g,'').replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-');}
-function statePrefix(office){const o=(office||'').toLowerCase().trim();if(['saco','kennebunk'].includes(o))return'me';if(['andover','bradford','methuen','newburyport'].includes(o))return'ma';return'nh';}
+function statePrefix(office){const o=(office||'').toLowerCase().trim();if(['saco','biddeford','kennebunk'].includes(o))return'me';if(['andover','bradford','haverhill','methuen','newburyport'].includes(o))return'ma';return'nh';}
 function veraniUrl(d){const mls=(d.mls||'').trim().toUpperCase();if(!mls||mls==='NON-MLS')return null;return`https://www.verani.com/${statePrefix(d.office)}-real-estate/${toSlug(d.town)}/${toSlug(d.addr)}-mls-${mls.toLowerCase()}`;}
 
 function renderBuyerTable(buyerRows,appendTo){
@@ -877,8 +1107,9 @@ function renderAgentList(containerId,agentMap,deals,regionId,regionColor){
 
 function renderAgentListContent(el,agentMap,deals,regionId,regionColor,r,weekDeals){
   el.innerHTML='';const list=Object.values(agentMap).filter(a=>a.regionId===regionId).sort((a,b)=>weeklyScore(b)-weeklyScore(a));
-  const stats={closed:0,pend:0,newL:0,buyer:0,buyerAgency:0,showing:0,facilitator:0};
-  list.forEach(a=>{stats.closed+=a.closed;stats.pend+=a.pend;stats.newL+=a.newL;stats.buyer+=a.buyer;stats.buyerAgency+=(a.buyerAgency||0);stats.showing+=(a.showing||0);stats.facilitator+=(a.facilitator||0);});
+  const rDeals=(deals||[]).filter(d=>d.regionId===regionId);const cntByStatus=st=>rDeals.filter(d=>d.status===st).reduce((s,d)=>s+(d.count||1),0);
+  const stats={closed:cntByStatus('CLOSED'),pend:cntByStatus('PEND'),newL:cntByStatus('NEW'),buyer:0,buyerAgency:0,showing:0,facilitator:0};
+  list.forEach(a=>{stats.buyer+=a.buyer;stats.buyerAgency+=(a.buyerAgency||0);stats.showing+=(a.showing||0);stats.facilitator+=(a.facilitator||0);});
   const rbrs=(window._currentBuyerRows||[]).filter(br=>br.regionId===regionId);
   if(rbrs.length){stats.buyerAgency=rbrs.filter(br=>br.typeLabel==='agency').length;stats.showing=rbrs.filter(br=>br.typeLabel==='showing').length;stats.facilitator=rbrs.filter(br=>br.typeLabel==='facilitator').length;}
   const money=calcRegionMoney(deals,regionId);el.appendChild(renderRegionHeader(r,stats,money));
@@ -902,6 +1133,8 @@ function renderAgentListContent(el,agentMap,deals,regionId,regionColor,r,weekDea
   let wlbOpen=false;wlbPanel.style.display='none';wlbHdrBottom.style.display='none';function toggleWlb(){wlbOpen=!wlbOpen;wlbPanel.style.display=wlbOpen?'block':'none';wlbHdrBottom.style.display=wlbOpen?'flex':'none';document.getElementById(`wlb-toggle-${regionId}`).textContent=wlbOpen?'▲ Hide':'▼ Show';}
   wlbHdrTop.addEventListener('click',toggleWlb);wlbHdrBottom.addEventListener('click',toggleWlb);
   wlbWrap.appendChild(wlbHdrTop);wlbWrap.appendChild(wlbPanel);wlbWrap.appendChild(wlbHdrBottom);el.appendChild(wlbWrap);
+  const kudosHtml=renderKudosPanelHtml(computeAutoKudos(list,weekDeals||window._currentWeekDeals||{},regionId),_specialKudosStore[regionId]||[],r.color);
+  if(kudosHtml){const kudosHost=document.createElement('div');kudosHost.innerHTML=kudosHtml;el.appendChild(kudosHost.firstElementChild);}
   const weeklyYtdAgents={};list.forEach(a=>{const ak=agentKey(a.name);weeklyYtdAgents[ak]={name:a.name,office:a.office,regionId:a.regionId,points:weeklyScore(a),weeklyPts:[weeklyScore(a)],truth:{listings:a.newL||0,pendings:a.pend||0,closings:a.closed||0,listSideListings:a.newL||0,pendList:a.pendList||0,pendBuy:a.pendBuy||0,pendBoth:a.pendBoth||0,closedList:a.closedList||0,closedBuy:a.closedBuy||0,closedBoth:a.closedBoth||0,withdrawn:a.withdrawn||0,terminated:a.terminated||0,fallThru:a.fallThru||0,listedVal:a.newLVal||0,pipelineVal:a.pendVal||0,closedVal:a.closedVal||0,buyer:a.buyer||0}};});
   renderYTDAgentLeaderboard(`wlb-panel-${regionId}`,weeklyYtdAgents,[{label:'This week'}]);
 }
@@ -935,7 +1168,7 @@ function renderYTDAgentLeaderboard(containerId,ytdAgents,weeks){
 
 function renderSummary(agentMap,deals,containerId){
   const el=document.getElementById(containerId);el.innerHTML='';
-  const allStats=REGIONS.map(r=>{const list=Object.values(agentMap).filter(a=>a.regionId===r.id);const money=calcRegionMoney(deals,r.id);const brs=(window._currentBuyerRows||[]).filter(br=>br.regionId===r.id);const brAgency=brs.filter(br=>br.typeLabel==='agency').length;const brShowing=brs.filter(br=>br.typeLabel==='showing').length;const brFacilitator=brs.filter(br=>br.typeLabel==='facilitator').length;return{...r,stats:{closed:list.reduce((s,a)=>s+(a.closed||0),0),pend:list.reduce((s,a)=>s+(a.pend||0),0),newL:list.reduce((s,a)=>s+(a.newL||0),0),buyer:list.reduce((s,a)=>s+(a.buyer||0),0),buyerAgency:brAgency||list.reduce((s,a)=>s+(a.buyerAgency||0),0),showing:brShowing||list.reduce((s,a)=>s+(a.showing||0),0),facilitator:brFacilitator||list.reduce((s,a)=>s+(a.facilitator||0),0),pts:list.reduce((s,a)=>s+weeklyScore(a),0)},money};});
+  const allStats=REGIONS.map(r=>{const list=Object.values(agentMap).filter(a=>a.regionId===r.id);const money=calcRegionMoney(deals,r.id);const rDeals=(deals||[]).filter(d=>d.regionId===r.id);const cntByStatus=st=>rDeals.filter(d=>d.status===st).reduce((s,d)=>s+(d.count||1),0);const brs=(window._currentBuyerRows||[]).filter(br=>br.regionId===r.id);const brAgency=brs.filter(br=>br.typeLabel==='agency').length;const brShowing=brs.filter(br=>br.typeLabel==='showing').length;const brFacilitator=brs.filter(br=>br.typeLabel==='facilitator').length;return{...r,stats:{closed:cntByStatus('CLOSED'),pend:cntByStatus('PEND'),newL:cntByStatus('NEW'),buyer:list.reduce((s,a)=>s+(a.buyer||0),0),buyerAgency:brAgency||list.reduce((s,a)=>s+(a.buyerAgency||0),0),showing:brShowing||list.reduce((s,a)=>s+(a.showing||0),0),facilitator:brFacilitator||list.reduce((s,a)=>s+(a.facilitator||0),0),pts:list.reduce((s,a)=>s+weeklyScore(a),0)},money};});
   const maxPts=Math.max(...allStats.map(r=>r.stats.pts),1);
   const grid=document.createElement('div');grid.className='summary-grid';
   allStats.forEach(r=>{const s=r.stats,m=r.money,isLeader=s.pts===maxPts&&s.pts>0;const card=document.createElement('div');card.className='summary-card';card.style.cssText=`background:${r.bg};border-color:${r.bg}`;card.onclick=()=>{const tabs=document.querySelectorAll('.tab');showTab(r.id,tabs[REGIONS.findIndex(x=>x.id===r.id)+1],r.color);};
@@ -1032,6 +1265,8 @@ function renderSummary(agentMap,deals,containerId){
   wlbHdrTopS.addEventListener('click',toggleWlbS);wlbHdrBottomS.addEventListener('click',toggleWlbS);
   wlbWrapS.appendChild(wlbHdrTopS);wlbWrapS.appendChild(wlbPanelS);wlbWrapS.appendChild(wlbHdrBottomS);
   el.appendChild(wlbWrapS);
+  const summaryKudosHtml=renderKudosPanelHtml(computeAutoKudos(Object.values(agentMap),window._currentWeekDeals||{},null),allSpecialKudosCombined(),'#534AB7');
+  if(summaryKudosHtml){const kudosHost=document.createElement('div');kudosHost.innerHTML=summaryKudosHtml;el.appendChild(kudosHost.firstElementChild);}
   const allWeeklyAgents={};
   Object.values(agentMap).forEach(a=>{
     const ak=(a.name||'').toLowerCase().trim();
@@ -1078,14 +1313,14 @@ function renderWeeksLoaded(){
       const idx=_ytdData.weeks.findIndex(function(wk){return wk.label===oldLabel;});
       if(idx<0){setMsg('Week not found.','#A32D2D');return;}
       _ytdData.weeks[idx]={..._ytdData.weeks[idx],label:nl};
-      writeToDrive({weeks:_ytdData.weeks})
+      writeToDrive({weeks:_ytdData.weeks,announcements:_announcementsStore,specialKudos:_specialKudosStore})
         .then(function(){renderWeeksLoaded();setMsg('Renamed "'+oldLabel+'" → "'+nl+'".','#1D9E75');})
         .catch(function(err){setMsg('Rename failed: '+err.message,'#A32D2D');});
     });
     row.querySelector('.delete-btn').addEventListener('click',function(e){
       e.stopPropagation();const lbl=this.getAttribute('data-label');
       _ytdData.weeks=_ytdData.weeks.filter(function(wk){return wk.label!==lbl;});
-      writeToDrive({weeks:_ytdData.weeks})
+      writeToDrive({weeks:_ytdData.weeks,announcements:_announcementsStore,specialKudos:_specialKudosStore})
         .then(function(){
           if(_ytdData.weeks.length){var last=_ytdData.weeks[_ytdData.weeks.length-1];renderAll(last.agents,last.deals||[],last.weekDeals||{});}else renderAll({},{},[]);
           updatePublishStatusBar();renderWeeksLoaded();setMsg('Deleted "'+lbl+'".','#1D9E75');
@@ -1101,21 +1336,17 @@ function renderYTD(){
   const el=document.getElementById('ytd-content');el.innerHTML='';
   const ytd=loadYTD();
   if(!ytd.weeks.length){el.innerHTML='<div class="empty-state">No YTD data yet.</div>';return;}
-  const allDeals=ytd.weeks.flatMap(w=>w.deals||[]);
-  const ytdRegAgents={};
-  ytd.weeks.forEach(week=>{
-    Object.entries(week.agents||{}).forEach(([key,a])=>{
-      if(!ytdRegAgents[key])ytdRegAgents[key]={...a,buyer:0};
-      ytdRegAgents[key].closed=Math.max(ytdRegAgents[key].closed||0,a.closed||0);
-      ytdRegAgents[key].pend=Math.max(ytdRegAgents[key].pend||0,a.pend||0);
-      ytdRegAgents[key].newL=Math.max(ytdRegAgents[key].newL||0,a.newL||0);
-      ytdRegAgents[key].buyer=(ytdRegAgents[key].buyer||0)+(a.buyer||0);
-    });
-  });
+  const weekIdx=typeof _currentWeekIdx==='number'&&_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1;
+  const weeksToUse=ytd.weeks.slice(0,weekIdx+1);
+  const allDeals=weeksToUse.flatMap(w=>w.deals||[]);
+  const ytdAgents=buildYTDAgents(weeksToUse);
   const allStats=REGIONS.map(r=>{
-    const list=Object.values(ytdRegAgents).filter(a=>a.regionId===r.id);
+    const list=Object.values(ytdAgents).filter(a=>a.regionId===r.id);
     const money=calcRegionMoney(allDeals,r.id);
-    return{...r,stats:{closed:list.reduce((s,a)=>s+(a.closed||0),0),pend:list.reduce((s,a)=>s+(a.pend||0),0),newL:list.reduce((s,a)=>s+(a.newL||0),0),buyer:list.reduce((s,a)=>s+(a.buyer||0),0),buyerAgency:list.reduce((s,a)=>s+(a.buyerAgency||0),0),showing:list.reduce((s,a)=>s+(a.showing||0),0),facilitator:list.reduce((s,a)=>s+(a.facilitator||0),0),pts:list.reduce((s,a)=>s+weeklyScore(a),0)},money};
+    const rDeals=allDeals.filter(d=>d.regionId===r.id);
+    const cntByStatus=st=>rDeals.filter(d=>d.status===st).reduce((s,d)=>s+(d.count||1),0);
+    const brs=[];
+    return{...r,stats:{closed:cntByStatus('CLOSED'),pend:cntByStatus('PEND'),newL:cntByStatus('NEW'),buyer:list.reduce((s,a)=>s+(a.truth?.buyer||a.buyer||0),0),buyerAgency:list.reduce((s,a)=>s+(a.truth?.buyerAgency||a.buyerAgency||0),0),showing:list.reduce((s,a)=>s+(a.truth?.showing||a.showing||0),0),facilitator:list.reduce((s,a)=>s+(a.truth?.facilitator||a.facilitator||0),0),pts:list.reduce((s,a)=>s+(a.points||0),0)},money};
   });
   const maxPts=Math.max(...allStats.map(r=>r.stats.pts),1);
   const grid=document.createElement('div');grid.className='summary-grid';
@@ -1132,7 +1363,6 @@ function renderYTD(){
   const standings=document.createElement('div');standings.className='standings';standings.innerHTML='<div class="standings-title">YTD Regional Standing</div>';
   [...allStats].sort((a,b)=>b.stats.pts-a.stats.pts).forEach((r,i)=>{const pct=Math.round((r.stats.pts/maxPts)*100);const row=document.createElement('div');row.className='standing-row';row.innerHTML=`<div class="standing-rank">${i+1}</div><div class="standing-name" style="color:${r.color}">${r.name}</div><div class="standing-bar-wrap"><div class="standing-bar" style="width:${pct}%;background:${r.barColor}"></div></div><div class="standing-pts" style="color:${r.color}">${r.stats.pts} pts</div><div class="standing-money">${r.money.soldTotal>0?fmtMoney(r.money.soldTotal):'—'}</div>`;standings.appendChild(row);});
   el.appendChild(standings);
-  const ytdAgents=buildYTDAgents(ytd.weeks);
   const lbWrap=document.createElement('div');lbWrap.style.cssText='margin-top:12px;border-radius:10px;border:1px solid #e2e0d8;overflow:hidden;background:#fff';
   const lbHdrTop=document.createElement('div');lbHdrTop.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#fafaf8;border-bottom:1px solid #e2e0d8;cursor:pointer;user-select:none';
   lbHdrTop.innerHTML='<div class="ytd-section-title" style="margin:0;border:none;padding:0">YTD Agent Leaderboard</div><span id="ytd-lb-toggle" style="font-size:11px;color:#888780">▼ Show</span>';
@@ -1140,7 +1370,7 @@ function renderYTD(){
   const lbHdrBottom=document.createElement('div');lbHdrBottom.style.cssText='display:none;align-items:center;justify-content:center;padding:8px 14px;background:#fafaf8;border-top:1px solid #e2e0d8;cursor:pointer;user-select:none';
   lbHdrBottom.innerHTML='<span style="font-size:11px;color:#888780">▲ Hide YTD Agent Leaderboard</span>';
   let lbOpen=false,lbBuilt=false;
-  function toggleLb(){lbOpen=!lbOpen;lbBoard.style.display=lbOpen?'block':'none';lbHdrBottom.style.display=lbOpen?'flex':'none';document.getElementById('ytd-lb-toggle').textContent=lbOpen?'▲ Hide':'▼ Show';if(lbOpen&&!lbBuilt){renderYTDAgentLeaderboard('ytd-agent-board',ytdAgents,ytd.weeks);lbBuilt=true;}}
+  function toggleLb(){lbOpen=!lbOpen;lbBoard.style.display=lbOpen?'block':'none';lbHdrBottom.style.display=lbOpen?'flex':'none';document.getElementById('ytd-lb-toggle').textContent=lbOpen?'▲ Hide':'▼ Show';if(lbOpen&&!lbBuilt){renderYTDAgentLeaderboard('ytd-agent-board',ytdAgents,weeksToUse);lbBuilt=true;}}
   lbHdrTop.addEventListener('click',toggleLb);lbHdrBottom.addEventListener('click',toggleLb);
   lbWrap.appendChild(lbHdrTop);lbWrap.appendChild(lbBoard);lbWrap.appendChild(lbHdrBottom);
   el.appendChild(lbWrap);
@@ -1158,20 +1388,474 @@ function renderWeekNavBar(){
   el.style.display='block';el.innerHTML='';const isLatest=_currentWeekIdx<0||_currentWeekIdx===ytd.weeks.length-1;const bar=document.createElement('div');bar.style.cssText='display:flex;align-items:center;gap:8px;background:#EEEDFE;border:1px solid #CECBF6;border-radius:12px;padding:8px 14px;';
   const dot=document.createElement('div');dot.style.cssText='width:8px;height:8px;border-radius:50%;background:#534AB7;flex-shrink:0';bar.appendChild(dot);const lbl=document.createElement('span');lbl.style.cssText='font-size:12px;font-weight:500;color:#534AB7;white-space:nowrap;flex-shrink:0';lbl.textContent='Viewing week';bar.appendChild(lbl);
   const prevBtn=document.createElement('button');prevBtn.innerHTML='←';prevBtn.style.cssText='width:28px;height:28px;border-radius:50%;border:1px solid #CECBF6;background:#fff;font-size:13px;color:#534AB7;cursor:pointer;flex-shrink:0';prevBtn.disabled=(_currentWeekIdx<=0);prevBtn.style.opacity=prevBtn.disabled?'0.3':'1';bar.appendChild(prevBtn);
-  const selWrap=document.createElement('div');selWrap.style.cssText='position:relative;flex:1;min-width:0';const sel=document.createElement('select');sel.id='week-nav-select';sel.style.cssText="width:100%;padding:5px 24px 5px 10px;border:1px solid #CECBF6;border-radius:8px;font-size:12px;font-weight:500;color:#534AB7;background:#fff;cursor:pointer;appearance:none;-webkit-appearance:none;font-family:'DM Sans',sans-serif";const curIdx=_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1;ytd.weeks.forEach((w,i)=>{const opt=document.createElement('option');opt.value=i;opt.textContent='Wk '+(i+1)+' · '+w.label;if(i===curIdx)opt.selected=true;sel.appendChild(opt);});const arr=document.createElement('div');arr.style.cssText='position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:#534AB7;font-size:9px';arr.textContent='▼';selWrap.appendChild(sel);selWrap.appendChild(arr);bar.appendChild(selWrap);
+  const selWrap=document.createElement('div');selWrap.style.cssText='position:relative;flex:1;min-width:0';const sel=document.createElement('select');sel.id='week-nav-select';sel.style.cssText="width:100%;padding:5px 24px 5px 10px;border:1px solid #CECBF6;border-radius:8px;font-size:12px;font-weight:500;color:#534AB7;background:#fff;cursor:pointer;appearance:none;-webkit-appearance:none;font-family:'DM Sans',sans-serif";const curIdx=_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1;const sortedForNum=[...ytd.weeks].sort(function(a,b){return labelToDate(a)-labelToDate(b);});ytd.weeks.forEach((w,i)=>{const opt=document.createElement('option');opt.value=i;const wkNum=sortedForNum.findIndex(function(sw){return sw.label===w.label;})+1;opt.textContent='Wk '+wkNum+' · '+w.label;if(i===curIdx)opt.selected=true;sel.appendChild(opt);});const arr=document.createElement('div');arr.style.cssText='position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:#534AB7;font-size:9px';arr.textContent='▼';selWrap.appendChild(sel);selWrap.appendChild(arr);bar.appendChild(selWrap);
   const nextBtn=document.createElement('button');nextBtn.innerHTML='→';nextBtn.style.cssText='width:28px;height:28px;border-radius:50%;border:1px solid #CECBF6;background:#fff;font-size:13px;color:#534AB7;cursor:pointer;flex-shrink:0';nextBtn.disabled=isLatest;nextBtn.style.opacity=nextBtn.disabled?'0.3':'1';bar.appendChild(nextBtn);
   if(!isLatest){const curBtn=document.createElement('button');curBtn.textContent='→ Current week';curBtn.style.cssText="font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;border:1px solid #534AB7;background:#534AB7;color:#fff;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:'DM Sans',sans-serif";curBtn.addEventListener('click',()=>goToWeek(ytd.weeks.length-1));bar.appendChild(curBtn);}
   el.appendChild(bar);
-  function goToWeek(idx){const y=loadYTD();if(idx<0||idx>=y.weeks.length)return;_currentWeekIdx=idx;const w=y.weeks[idx];updateStatsBar(w.agents||{},w.deals||[]);renderSummary(w.agents||{},w.deals||[],'summary-content');renderYTDStandingsForWeek(idx);REGIONS.forEach(r=>renderAgentList(r.id+'-content',w.agents||{},w.deals||[],r.id,r.color));window._currentWeekDeals=w.weekDeals||{};window._currentAgents=w.agents||{};window._currentBuyerRows=w.buyerRows||[];document.getElementById('current-week-label').textContent='Week of '+w.label;renderWeekNavBar();}
+  function goToWeek(idx){const y=loadYTD();if(idx<0||idx>=y.weeks.length)return;_currentWeekIdx=idx;const w=y.weeks[idx];window._currentWeekDeals=w.weekDeals||{};window._currentAgents=w.agents||{};window._currentBuyerRows=w.buyerRows||[];updateStatsBar(w.agents||{},w.deals||[]);renderAnnouncements(_announcementsStore);renderSummary(w.agents||{},w.deals||[],'summary-content');renderYTDStandingsForWeek(idx);REGIONS.forEach(r=>renderAgentList(r.id+'-content',w.agents||{},w.deals||[],r.id,r.color));document.getElementById('current-week-label').textContent='Week of '+w.label;renderWeekNavBar();const ytdTab=document.getElementById('ytd-content');if(ytdTab&&ytdTab.style.display!=='none'&&ytdTab.innerHTML!=='')renderYTD();}
   prevBtn.addEventListener('click',()=>goToWeek((_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1)-1));nextBtn.addEventListener('click',()=>goToWeek((_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1)+1));sel.addEventListener('change',function(){goToWeek(parseInt(this.value));});
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ANNOUNCEMENTS — independent of week data, run on their own start/end date-time.
+// Stored in Drive as a top-level "announcements" key: {company:[...], seacoast:[...],
+// ma:[...], maine:[...]}. Each entry: {id, text, startAt, endAt, createdAt, updatedAt}.
+// startAt/endAt are datetime-local strings, or '' meaning "no bound".
+// ═══════════════════════════════════════════════════════════════════════════════
+const ANNOUNCEMENT_BANNERS=[
+  {key:'company', label:'🏢 Company', bg:'#552448', color:'#fff'},
+  {key:'seacoast', label:'🌊 Seacoast NH', bg:'#185FA5', color:'#fff'},
+  {key:'ma', label:'🍁 Massachusetts', bg:'#993556', color:'#fff'},
+  {key:'maine', label:'🌲 Maine', bg:'#0F6E56', color:'#fff'},
+];
+let _announcementsStore={company:[],seacoast:[],ma:[],maine:[]};
+let _announceEditing={}; // key -> id currently open in edit form, or '__new__'
+
+function normalizeAnnouncementsStore(raw){
+  const store={company:[],seacoast:[],ma:[],maine:[]};
+  if(raw&&typeof raw==='object'){
+    ['company','seacoast','ma','maine'].forEach(function(k){
+      if(Array.isArray(raw[k])) store[k]=raw[k].filter(Boolean);
+    });
+  }
+  return store;
+}
+function genAnnouncementId(){return 'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function isAnnouncementActive(entry,now){
+  now=now||new Date();
+  if(entry.startAt){const s=new Date(entry.startAt);if(!isNaN(s)&&now<s)return false;}
+  if(entry.endAt){const e=new Date(entry.endAt);if(!isNaN(e)&&now>e)return false;}
+  return true;
+}
+function announcementStatus(entry,now){
+  now=now||new Date();
+  if(entry.startAt){const s=new Date(entry.startAt);if(!isNaN(s)&&now<s)return 'scheduled';}
+  if(entry.endAt){const e=new Date(entry.endAt);if(!isNaN(e)&&now>e)return 'expired';}
+  return 'live';
+}
+function pickActiveAnnouncement(list){
+  if(!Array.isArray(list))return null;
+  const now=new Date();
+  const active=list.filter(function(a){return a&&a.text&&isAnnouncementActive(a,now);});
+  if(!active.length)return null;
+  active.sort(function(a,b){return new Date(b.updatedAt||b.createdAt||0)-new Date(a.updatedAt||a.createdAt||0);});
+  return active[0];
+}
+function fmtAnnounceDate(v){
+  if(!v)return '';
+  const d=new Date(v);
+  if(isNaN(d))return '';
+  return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+}
+// Persists the whole announcements store to Drive. Always reads weeks fresh
+// first and writes both keys back, since the backend replaces the entire
+// file on each write — omitting a key would silently wipe it out.
+function persistAnnouncementsStore(onDone){
+  setMsg('Saving announcements to Drive…','#185FA5');
+  readFromDrive()
+    .then(function(existing){
+      const weeks=existing.weeks||_ytdData.weeks||[];
+      return writeToDrive({weeks:weeks,announcements:_announcementsStore,specialKudos:_specialKudosStore});
+    })
+    .then(function(){
+      setMsg('✓ Announcements saved.','#1D9E75');
+      renderAnnouncements(_announcementsStore);
+      if(onDone)onDone();
+    })
+    .catch(function(e){
+      setMsg('✗ Save failed: '+e.message,'#A32D2D');
+    });
+}
+function addAnnouncementEntry(key){
+  _announceEditing[key]='__new__';
+  renderAnnouncementsManager();
+}
+function editAnnouncementEntry(key,id){
+  _announceEditing[key]=id;
+  renderAnnouncementsManager();
+}
+function cancelAnnouncementEdit(key){
+  delete _announceEditing[key];
+  renderAnnouncementsManager();
+}
+function saveAnnouncementEntry(key,id){
+  const textEl=document.getElementById('ann-form-text-'+key);
+  const startEl=document.getElementById('ann-form-start-'+key);
+  const endEl=document.getElementById('ann-form-end-'+key);
+  const text=(textEl.value||'').trim();
+  if(!text){setMsg('Announcement text can\'t be blank.','#A32D2D');return;}
+  const startAt=startEl.value||'';
+  const endAt=endEl.value||'';
+  if(startAt&&endAt&&new Date(endAt)<new Date(startAt)){
+    setMsg('"Until" date must be after "Runs from" date.','#A32D2D');return;
+  }
+  const list=_announcementsStore[key]||(_announcementsStore[key]=[]);
+  const nowIso=new Date().toISOString();
+  if(id==='__new__'){
+    list.push({id:genAnnouncementId(),text:text,startAt:startAt,endAt:endAt,createdAt:nowIso,updatedAt:nowIso});
+  }else{
+    const idx=list.findIndex(function(e){return e.id===id;});
+    if(idx>=0)list[idx]={...list[idx],text:text,startAt:startAt,endAt:endAt,updatedAt:nowIso};
+  }
+  delete _announceEditing[key];
+  persistAnnouncementsStore(renderAnnouncementsManager);
+}
+function deleteAnnouncementEntry(key,id){
+  if(!confirm('Delete this announcement? This cannot be undone.'))return;
+  _announcementsStore[key]=(_announcementsStore[key]||[]).filter(function(e){return e.id!==id;});
+  persistAnnouncementsStore(renderAnnouncementsManager);
+}
+function announcementFormHtml(key,entry){
+  const text=entry?entry.text:'';
+  const startAt=entry?entry.startAt||'':'';
+  const endAt=entry?entry.endAt||'':'';
+  const id=entry?entry.id:'__new__';
+  return `<div style="border:1px dashed #c8c5be;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;background:#fafaf8;">
+    <input id="ann-form-text-${key}" type="text" value="${(text||'').replace(/"/g,'&quot;')}" placeholder="Announcement text…" style="padding:6px 10px;border:1px solid #e2e0d8;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;color:#1a1a18">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <label style="font-size:11px;color:#5F5E5A;display:flex;flex-direction:column;gap:3px;">Runs from <span style="font-weight:400;color:#aaa9a2">(blank = now)</span>
+        <input id="ann-form-start-${key}" type="datetime-local" value="${startAt}" style="padding:5px 8px;border:1px solid #e2e0d8;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;color:#1a1a18">
+      </label>
+      <label style="font-size:11px;color:#5F5E5A;display:flex;flex-direction:column;gap:3px;">Until <span style="font-weight:400;color:#aaa9a2">(blank = never)</span>
+        <input id="ann-form-end-${key}" type="datetime-local" value="${endAt}" style="padding:5px 8px;border:1px solid #e2e0d8;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;color:#1a1a18">
+      </label>
+      <div style="display:flex;gap:8px;margin-left:auto;align-self:flex-end;">
+        <button class="btn btn-secondary" style="padding:6px 14px;font-size:12px;" onclick="cancelAnnouncementEdit('${key}')">Cancel</button>
+        <button class="btn btn-primary" style="padding:6px 14px;font-size:12px;" onclick="saveAnnouncementEntry('${key}','${id}')">Save</button>
+      </div>
+    </div>
+  </div>`;
+}
+function renderAnnouncementsManager(){
+  const body=document.getElementById('announcements-manager-body');
+  if(!body)return;
+  body.innerHTML='';
+  const now=new Date();
+  ANNOUNCEMENT_BANNERS.forEach(function(b){
+    const list=(_announcementsStore[b.key]||[]).slice().sort(function(a,c){return new Date(c.updatedAt||c.createdAt||0)-new Date(a.updatedAt||a.createdAt||0);});
+    const section=document.createElement('div');
+    const header=document.createElement('div');
+    header.style.cssText='display:flex;align-items:center;justify-content:space-between;';
+    header.innerHTML=`<span style="font-size:12px;font-weight:700;color:${b.bg}">${b.label}</span>`;
+    const addBtn=document.createElement('button');
+    addBtn.className='btn btn-secondary';addBtn.style.cssText='padding:4px 12px;font-size:11px;';
+    addBtn.textContent='+ Add announcement';
+    addBtn.onclick=function(){addAnnouncementEntry(b.key);};
+    header.appendChild(addBtn);
+    section.appendChild(header);
+    const rowsWrap=document.createElement('div');
+    rowsWrap.style.cssText='display:flex;flex-direction:column;gap:6px;margin-top:6px;';
+    if(_announceEditing[b.key]==='__new__'){
+      const formHost=document.createElement('div');formHost.innerHTML=announcementFormHtml(b.key,null);rowsWrap.appendChild(formHost.firstElementChild);
+    }
+    if(!list.length&&_announceEditing[b.key]!=='__new__'){
+      const empty=document.createElement('div');
+      empty.style.cssText='font-size:12px;color:#aaa9a2;padding:4px 2px;';
+      empty.textContent='No announcements set for this region.';
+      rowsWrap.appendChild(empty);
+    }
+    list.forEach(function(entry){
+      if(_announceEditing[b.key]===entry.id){
+        const formHost=document.createElement('div');formHost.innerHTML=announcementFormHtml(b.key,entry);rowsWrap.appendChild(formHost.firstElementChild);
+        return;
+      }
+      const status=announcementStatus(entry,now);
+      const badge=status==='live'?'<span style="font-size:10px;background:#E1F5EE;color:#0F6E56;padding:1px 7px;border-radius:10px;">Live</span>'
+        :status==='scheduled'?'<span style="font-size:10px;background:#E4E1F7;color:#534AB7;padding:1px 7px;border-radius:10px;">Scheduled</span>'
+        :'<span style="font-size:10px;background:#f0eeea;color:#888780;padding:1px 7px;border-radius:10px;">Expired</span>';
+      const dateRange=[entry.startAt?('from '+fmtAnnounceDate(entry.startAt)):null, entry.endAt?('until '+fmtAnnounceDate(entry.endAt)):null].filter(Boolean).join(' · ')||'always on';
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:10px;padding:6px 8px;border:1px solid #e2e0d8;border-radius:8px;';
+      row.innerHTML=`<span style="flex:1;font-size:13px;color:#1a1a18;">${entry.text}</span><span style="font-size:11px;color:#aaa9a2;white-space:nowrap;">${dateRange}</span>${badge}<button class="edit-label-btn" style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid #c8c5be;background:#f5f4f0;color:#5F5E5A;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">✏️ edit</button><button class="delete-btn" style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid #F7C1C1;background:#FCEBEB;color:#A32D2D;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">✕ delete</button>`;
+      row.querySelector('.edit-label-btn').onclick=function(){editAnnouncementEntry(b.key,entry.id);};
+      row.querySelector('.delete-btn').onclick=function(){deleteAnnouncementEntry(b.key,entry.id);};
+      rowsWrap.appendChild(row);
+    });
+    section.appendChild(rowsWrap);
+    body.appendChild(section);
+  });
+}
+
+// ── Seamless ticker scroll (measures text width so speed stays consistent) ──
+function setupTickerScroll(moveEl){
+  requestAnimationFrame(function(){
+    const seg=moveEl.querySelector('.ticker-seg');
+    if(!seg)return;
+    const segWidth=seg.getBoundingClientRect().width;
+    const MIN_SEG_WIDTH=200; // keep short messages from looping too fast
+    const PIXELS_PER_SECOND=55;
+    const duration=Math.max(segWidth,MIN_SEG_WIDTH)/PIXELS_PER_SECOND;
+    moveEl.style.animationDuration=duration+'s';
+    moveEl.classList.add('is-animating');
+  });
+}
+// Renders the live ticker preview from the announcements store. This is the
+// "what does the public see right now" view — it always reflects the real
+// current date/time, independent of which week is being browsed/previewed.
+function renderAnnouncements(store){
+  const wrap=document.getElementById('announcements-wrap');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  ANNOUNCEMENT_BANNERS.forEach(function(b){
+    const entry=pickActiveAnnouncement((store||{})[b.key]);
+    if(!entry)return;
+    const text=(entry.text||'').trim();
+    if(!text)return;
+    const ticker=document.createElement('div');
+    ticker.className='ticker-wrap';
+    ticker.style.background=b.bg;
+    ticker.innerHTML=`<div class="ticker-inner"><span class="ticker-label" style="color:${b.color};border-right:1px solid rgba(255,255,255,0.3)">${b.label}</span><div class="ticker-track"><div class="ticker-move"><span class="ticker-seg" style="color:${b.color}">${text}</span><span class="ticker-seg" style="color:${b.color}">${text}</span></div></div></div>`;
+    wrap.appendChild(ticker);
+    setupTickerScroll(ticker.querySelector('.ticker-move'));
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// KUDOS — auto-computed weekly categories + hand-picked special kudos.
+// Auto categories are computed fresh every render straight from that week's
+// agent/deal data (Most Closings, Highest Volume, Buyer Contracts, Most New
+// Listings, Biggest Sale) -- no manual entry needed, and any category with
+// no qualifying winner simply doesn't render. Special kudos are hand-picked,
+// stored in Drive as a top-level "specialKudos" key: {seacoast:[...],
+// ma:[...], maine:[...]}. Each entry: {id, name, label, detail, startAt,
+// endAt, createdAt, updatedAt}. Unlike Announcements, ALL currently-active
+// special kudos show at once (not just one pick), and every entry always
+// surfaces in the Regional Summary tab in addition to its own region's tab.
+// ═══════════════════════════════════════════════════════════════════════════════
+const KUDOS_REGIONS=[
+  {key:'seacoast', label:'🌊 Seacoast NH', bg:'#185FA5'},
+  {key:'ma', label:'🍁 Massachusetts', bg:'#993556'},
+  {key:'maine', label:'🌲 Maine', bg:'#0F6E56'},
+];
+let _specialKudosStore={seacoast:[],ma:[],maine:[]};
+let _kudosEditing={}; // key -> id currently open in edit form, or '__new__'
+
+function normalizeSpecialKudosStore(raw){
+  const store={seacoast:[],ma:[],maine:[]};
+  if(raw&&typeof raw==='object'){
+    ['seacoast','ma','maine'].forEach(function(k){
+      if(Array.isArray(raw[k])) store[k]=raw[k].filter(Boolean);
+    });
+  }
+  return store;
+}
+function genKudosId(){return 'k'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function isKudosActive(entry,now){
+  now=now||new Date();
+  if(entry.startAt){const s=new Date(entry.startAt);if(!isNaN(s)&&now<s)return false;}
+  if(entry.endAt){const e=new Date(entry.endAt);if(!isNaN(e)&&now>e)return false;}
+  return true;
+}
+function kudosStatus(entry,now){
+  now=now||new Date();
+  if(entry.startAt){const s=new Date(entry.startAt);if(!isNaN(s)&&now<s)return 'scheduled';}
+  if(entry.endAt){const e=new Date(entry.endAt);if(!isNaN(e)&&now>e)return 'expired';}
+  return 'live';
+}
+function activeSpecialKudos(list){
+  if(!Array.isArray(list))return [];
+  const now=new Date();
+  return list.filter(function(k){return k&&k.name&&isKudosActive(k,now);});
+}
+function allSpecialKudosCombined(){
+  return [].concat(_specialKudosStore.seacoast||[],_specialKudosStore.ma||[],_specialKudosStore.maine||[]);
+}
+function fmtKudosDate(v){
+  if(!v)return '';
+  const d=new Date(v);
+  if(isNaN(d))return '';
+  return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+}
+
+// ── Auto-computed weekly categories ──
+// list: array of agent objects already scoped to the desired region (or all
+// agents company-wide for Regional Summary). weekDeals: that week's full
+// deal detail (needed for Biggest Sale, which is deal-level, not an
+// agent-level rollup). regionId: pass a region id to also scope Biggest
+// Sale to that region, or leave falsy for company-wide.
+function computeAutoKudos(list,weekDeals,regionId){
+  let mostClosings=null,highestVolume=null,buyerLeader=null,mostNewListings=null;
+  (list||[]).forEach(function(a){
+    const closings=a.closed||0;
+    if(closings>0&&(!mostClosings||closings>mostClosings.value))mostClosings={name:a.name,value:closings};
+    const volume=(typeof a.dedupVolume==='number')?a.dedupVolume:(a.newLVal||0)+(a.pendVal||0)+(a.closedVal||0);
+    if(volume>0&&(!highestVolume||volume>highestVolume.value))highestVolume={name:a.name,value:volume};
+    const buyer=a.buyer||0;
+    if(buyer>0&&(!buyerLeader||buyer>buyerLeader.value))buyerLeader={name:a.name,value:buyer};
+    const newL=a.newL||0;
+    if(newL>0&&(!mostNewListings||newL>mostNewListings.value))mostNewListings={name:a.name,value:newL};
+  });
+  let biggestSale=null;
+  Object.values(weekDeals||{}).forEach(function(d){
+    if(d.status!=='CLOSED'||!(d.soldP>0))return;
+    if(regionId&&d.regionId!==regionId)return;
+    if(!biggestSale||d.soldP>biggestSale.soldP)biggestSale={name:d.name,soldP:d.soldP};
+  });
+  if(!mostClosings&&!highestVolume&&!buyerLeader&&!mostNewListings&&!biggestSale)return null;
+  return {mostClosings,highestVolume,buyerLeader,mostNewListings,biggestSale};
+}
+
+// Returns an HTML string for the kudos panel, or '' if there's nothing at
+// all to show (no auto category has a winner AND no active special kudos).
+function renderKudosPanelHtml(autoKudos,specialList,accentColor){
+  const cards=[];
+  if(autoKudos){
+    if(autoKudos.mostClosings)cards.push({icon:'🏆',label:'Most closings',name:autoKudos.mostClosings.name,detail:autoKudos.mostClosings.value+' closing'+(autoKudos.mostClosings.value!==1?'s':'')});
+    if(autoKudos.highestVolume)cards.push({icon:'💰',label:'Highest volume',name:autoKudos.highestVolume.name,detail:fmtMoney(autoKudos.highestVolume.value)});
+    if(autoKudos.buyerLeader)cards.push({icon:'🎯',label:'Buyer contracts',name:autoKudos.buyerLeader.name,detail:autoKudos.buyerLeader.value+' agreement'+(autoKudos.buyerLeader.value!==1?'s':'')});
+    if(autoKudos.mostNewListings)cards.push({icon:'📋',label:'Most new listings',name:autoKudos.mostNewListings.name,detail:autoKudos.mostNewListings.value+' listing'+(autoKudos.mostNewListings.value!==1?'s':'')});
+    if(autoKudos.biggestSale)cards.push({icon:'🔥',label:'Biggest sale',name:autoKudos.biggestSale.name,detail:fmtMoney(autoKudos.biggestSale.soldP)});
+  }
+  const activeSpecial=activeSpecialKudos(specialList);
+  if(!cards.length&&!activeSpecial.length)return '';
+  const cardsHtml=cards.map(function(it){
+    return `<div style="background:#fff;border-radius:10px;padding:10px 12px;border:1px solid #e2e0d8;"><div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#888780;margin-bottom:4px">${it.icon} ${it.label}</div><div style="font-size:13px;font-weight:500;color:#1a1a18">${it.name}</div><div style="font-size:11px;color:#5F5E5A">${it.detail}</div></div>`;
+  }).join('');
+  const specialHtml=activeSpecial.map(function(k){
+    return `<p style="font-size:12px;margin:0;padding-top:6px;">🌟 <strong>${k.name}</strong> — ${k.detail||''}</p>`;
+  }).join('');
+  return `<div style="margin-top:8px;border-radius:10px;overflow:hidden;border:1px solid ${accentColor}30;">
+    <div style="padding:8px 14px;background:${accentColor}10;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:${accentColor}">🎉 This week's kudos</div>
+    <div style="padding:10px 14px;background:#fff;">
+      ${cardsHtml?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;${specialHtml?'margin-bottom:8px;':''}">${cardsHtml}</div>`:''}
+      ${specialHtml?`<div style="display:flex;flex-direction:column;gap:4px;${cardsHtml?'padding-top:6px;border-top:1px dashed #e2e0d8;':''}">${specialHtml}</div>`:''}
+    </div>
+  </div>`;
+}
+
+// ── Special Kudos Manager (admin only) ──
+function persistSpecialKudosStore(onDone){
+  setMsg('Saving kudos to Drive…','#185FA5');
+  readFromDrive()
+    .then(function(existing){
+      const weeks=existing.weeks||_ytdData.weeks||[];
+      return writeToDrive({weeks:weeks,announcements:_announcementsStore,specialKudos:_specialKudosStore});
+    })
+    .then(function(){
+      _ytdData={weeks:_ytdData.weeks||[],announcements:_announcementsStore,specialKudos:_specialKudosStore};
+      setMsg('✓ Kudos saved.','#1D9E75');
+      renderAll(window._currentAgents||{},[],window._currentWeekDeals||{});
+      if(onDone)onDone();
+    })
+    .catch(function(e){
+      setMsg('✗ Save failed: '+e.message,'#A32D2D');
+    });
+}
+function addSpecialKudos(key){_kudosEditing[key]='__new__';renderSpecialKudosManager();}
+function editSpecialKudos(key,id){_kudosEditing[key]=id;renderSpecialKudosManager();}
+function cancelSpecialKudosEdit(key){delete _kudosEditing[key];renderSpecialKudosManager();}
+function saveSpecialKudosEntry(key,id){
+  const nameEl=document.getElementById('kudos-form-name-'+key);
+  const labelEl=document.getElementById('kudos-form-label-'+key);
+  const detailEl=document.getElementById('kudos-form-detail-'+key);
+  const startEl=document.getElementById('kudos-form-start-'+key);
+  const endEl=document.getElementById('kudos-form-end-'+key);
+  const name=(nameEl.value||'').trim();
+  const detail=(detailEl.value||'').trim();
+  if(!name||!detail){setMsg('Name and detail are both required.','#A32D2D');return;}
+  const label=(labelEl.value||'').trim();
+  const startAt=startEl.value||'';
+  const endAt=endEl.value||'';
+  if(startAt&&endAt&&new Date(endAt)<new Date(startAt)){setMsg('"Until" date must be after "Runs from" date.','#A32D2D');return;}
+  const list=_specialKudosStore[key]||(_specialKudosStore[key]=[]);
+  const nowIso=new Date().toISOString();
+  if(id==='__new__'){
+    list.push({id:genKudosId(),name:name,label:label,detail:detail,startAt:startAt,endAt:endAt,createdAt:nowIso,updatedAt:nowIso});
+  }else{
+    const idx=list.findIndex(function(e){return e.id===id;});
+    if(idx>=0)list[idx]={...list[idx],name:name,label:label,detail:detail,startAt:startAt,endAt:endAt,updatedAt:nowIso};
+  }
+  delete _kudosEditing[key];
+  persistSpecialKudosStore(renderSpecialKudosManager);
+}
+function deleteSpecialKudos(key,id){
+  if(!confirm('Delete this kudos? This cannot be undone.'))return;
+  _specialKudosStore[key]=(_specialKudosStore[key]||[]).filter(function(e){return e.id!==id;});
+  persistSpecialKudosStore(renderSpecialKudosManager);
+}
+function kudosFormHtml(key,entry){
+  const name=entry?entry.name:'';
+  const label=entry?entry.label||'':'';
+  const detail=entry?entry.detail||'':'';
+  const startAt=entry?entry.startAt||'':'';
+  const endAt=entry?entry.endAt||'':'';
+  const id=entry?entry.id:'__new__';
+  return `<div style="border:1px dashed #c8c5be;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;background:#fafaf8;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input id="kudos-form-name-${key}" type="text" value="${(name||'').replace(/"/g,'&quot;')}" placeholder="Agent or team name…" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid #e2e0d8;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;color:#1a1a18">
+      <input id="kudos-form-label-${key}" type="text" value="${(label||'').replace(/"/g,'&quot;')}" placeholder="Short label (e.g. 10-year anniversary)…" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid #e2e0d8;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;color:#1a1a18">
+    </div>
+    <input id="kudos-form-detail-${key}" type="text" value="${(detail||'').replace(/"/g,'&quot;')}" placeholder="One-line detail (e.g. 10 years with Verani Realty!)…" style="padding:6px 10px;border:1px solid #e2e0d8;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;color:#1a1a18">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <label style="font-size:11px;color:#5F5E5A;display:flex;flex-direction:column;gap:3px;">Runs from <span style="font-weight:400;color:#aaa9a2">(blank = now)</span>
+        <input id="kudos-form-start-${key}" type="datetime-local" value="${startAt}" style="padding:5px 8px;border:1px solid #e2e0d8;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;color:#1a1a18">
+      </label>
+      <label style="font-size:11px;color:#5F5E5A;display:flex;flex-direction:column;gap:3px;">Until <span style="font-weight:400;color:#aaa9a2">(blank = never)</span>
+        <input id="kudos-form-end-${key}" type="datetime-local" value="${endAt}" style="padding:5px 8px;border:1px solid #e2e0d8;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;color:#1a1a18">
+      </label>
+      <div style="display:flex;gap:8px;margin-left:auto;align-self:flex-end;">
+        <button class="btn btn-secondary" style="padding:6px 14px;font-size:12px;" onclick="cancelSpecialKudosEdit('${key}')">Cancel</button>
+        <button class="btn btn-primary" style="padding:6px 14px;font-size:12px;" onclick="saveSpecialKudosEntry('${key}','${id}')">Save</button>
+      </div>
+    </div>
+  </div>`;
+}
+function renderSpecialKudosManager(){
+  const body=document.getElementById('kudos-manager-body');
+  if(!body)return;
+  body.innerHTML='';
+  const now=new Date();
+  KUDOS_REGIONS.forEach(function(b){
+    const list=(_specialKudosStore[b.key]||[]).slice().sort(function(a,c){return new Date(c.updatedAt||c.createdAt||0)-new Date(a.updatedAt||a.createdAt||0);});
+    const section=document.createElement('div');
+    const header=document.createElement('div');
+    header.style.cssText='display:flex;align-items:center;justify-content:space-between;';
+    header.innerHTML=`<span style="font-size:12px;font-weight:700;color:${b.bg}">${b.label}</span>`;
+    const addBtn=document.createElement('button');
+    addBtn.className='btn btn-secondary';addBtn.style.cssText='padding:4px 12px;font-size:11px;';
+    addBtn.textContent='+ Add special kudos';
+    addBtn.onclick=function(){addSpecialKudos(b.key);};
+    header.appendChild(addBtn);
+    section.appendChild(header);
+    const rowsWrap=document.createElement('div');
+    rowsWrap.style.cssText='display:flex;flex-direction:column;gap:6px;margin-top:6px;';
+    if(_kudosEditing[b.key]==='__new__'){
+      const formHost=document.createElement('div');formHost.innerHTML=kudosFormHtml(b.key,null);rowsWrap.appendChild(formHost.firstElementChild);
+    }
+    if(!list.length&&_kudosEditing[b.key]!=='__new__'){
+      const empty=document.createElement('div');
+      empty.style.cssText='font-size:12px;color:#aaa9a2;padding:4px 2px;';
+      empty.textContent='No special kudos set for this region.';
+      rowsWrap.appendChild(empty);
+    }
+    list.forEach(function(entry){
+      if(_kudosEditing[b.key]===entry.id){
+        const formHost=document.createElement('div');formHost.innerHTML=kudosFormHtml(b.key,entry);rowsWrap.appendChild(formHost.firstElementChild);
+        return;
+      }
+      const status=kudosStatus(entry,now);
+      const badge=status==='live'?'<span style="font-size:10px;background:#E1F5EE;color:#0F6E56;padding:1px 7px;border-radius:10px;">Live</span>'
+        :status==='scheduled'?'<span style="font-size:10px;background:#E4E1F7;color:#534AB7;padding:1px 7px;border-radius:10px;">Scheduled</span>'
+        :'<span style="font-size:10px;background:#f0eeea;color:#888780;padding:1px 7px;border-radius:10px;">Expired</span>';
+      const dateRange=[entry.startAt?('from '+fmtKudosDate(entry.startAt)):null, entry.endAt?('until '+fmtKudosDate(entry.endAt)):null].filter(Boolean).join(' · ')||'always on';
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:10px;padding:6px 8px;border:1px solid #e2e0d8;border-radius:8px;';
+      row.innerHTML=`<span style="flex:1;font-size:13px;color:#1a1a18;"><strong>${entry.name}</strong>${entry.label?' — '+entry.label:''}: ${entry.detail||''}</span><span style="font-size:11px;color:#aaa9a2;white-space:nowrap;">${dateRange}</span>${badge}<button class="edit-label-btn" style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid #c8c5be;background:#f5f4f0;color:#5F5E5A;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">✏️ edit</button><button class="delete-btn" style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid #F7C1C1;background:#FCEBEB;color:#A32D2D;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">✕ delete</button>`;
+      row.querySelector('.edit-label-btn').onclick=function(){editSpecialKudos(b.key,entry.id);};
+      row.querySelector('.delete-btn').onclick=function(){deleteSpecialKudos(b.key,entry.id);};
+      rowsWrap.appendChild(row);
+    });
+    section.appendChild(rowsWrap);
+    body.appendChild(section);
+  });
 }
 
 function renderAll(agentMap,deals,weekDeals){
   window._currentWeekDeals=weekDeals||{};window._currentAgents=agentMap||{};window._currentBuyerRows=window._currentBuyerRows||[];
   updateStatsBar(agentMap,deals);
-  // In admin, keep week nav in sync with _currentWeekIdx
   var ytd=loadYTD();
   if(_currentWeekIdx<0&&ytd.weeks.length) _currentWeekIdx=ytd.weeks.length-1;
+  renderAnnouncements(_announcementsStore);
   renderWeekNavBar();
   const existingBanner=document.querySelector('.detail-banner');if(existingBanner)existingBanner.remove();
   renderSummary(agentMap,deals,'summary-content');if(existingBanner){const summaryEl=document.getElementById('summary-content');const newBanner=summaryEl.querySelector('.detail-banner');if(newBanner)newBanner.replaceWith(existingBanner);else summaryEl.appendChild(existingBanner);}
@@ -1223,6 +1907,11 @@ function showTab(id,el,color,afterRender){
 (function init(){
   function applyData(data){
     _ytdData=data;
+    _announcementsStore=normalizeAnnouncementsStore(data.announcements);
+    renderAnnouncementsManager();
+    renderAnnouncements(_announcementsStore);
+    _specialKudosStore=normalizeSpecialKudosStore(data.specialKudos);
+    renderSpecialKudosManager();
     sanitizeWeekData(_ytdData.weeks);
     var weeks=_ytdData.weeks||[];
     if(!weeks.length) return;

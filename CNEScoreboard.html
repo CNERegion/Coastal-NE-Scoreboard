@@ -225,6 +225,17 @@
     #week-nav-bar > div { padding:6px 8px; gap:5px; }
     #week-nav-bar select { font-size:11px; }
   }
+  /* ── ANNOUNCEMENT TICKERS ── */
+  .ticker-wrap{width:100%;overflow:hidden;padding:0;margin-bottom:6px;border-radius:8px;}
+  .ticker-inner{display:flex;align-items:center;height:36px;}
+  .ticker-label{flex-shrink:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:0 12px;height:100%;display:flex;align-items:center;white-space:nowrap;}
+  .ticker-track{flex:1;overflow:hidden;height:100%;display:flex;align-items:center;position:relative;}
+  .ticker-move{display:flex;white-space:nowrap;width:max-content;}
+  .ticker-move.is-animating{animation:ticker-scroll linear infinite;}
+  .ticker-move:hover{animation-play-state:paused;}
+  .ticker-seg{display:inline-flex;align-items:center;white-space:nowrap;font-size:13px;font-weight:500;padding-right:56px;}
+  @keyframes ticker-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+  @media(max-width:480px){.ticker-seg{font-size:12px;padding-right:36px;}.ticker-label{font-size:10px;padding:0 8px;}}
 </style>
 </head>
 <body>
@@ -266,6 +277,9 @@
 
   <div id="week-nav-bar" style="display:none;margin-bottom:1.25rem;"></div>
 
+  <!-- ── ANNOUNCEMENT BANNERS ── -->
+  <div id="announcements-wrap" style="margin-bottom:8px;display:flex;flex-direction:column;gap:6px;"></div>
+
   <div class="section active" id="tab-summary"><div id="summary-content"></div></div>
   <div class="section" id="tab-seacoast"><div id="seacoast-content"></div></div>
   <div class="section" id="tab-ma"><div id="ma-content"></div></div>
@@ -293,11 +307,11 @@ const PUBLISH_TZ   = 'America/New_York';
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
-const MY_OFFICES=['exeter','portsmouth','andover','bradford','methuen','newburyport','saco','kennebunk'];
+const MY_OFFICES=['exeter','portsmouth','andover','bradford','haverhill','methuen','newburyport','saco','biddeford','kennebunk'];
 const REGIONS=[
-  {id:'seacoast',name:'Seacoast NH',  offices:['exeter','portsmouth'],                       label:'Exeter · Portsmouth',                       color:'#185FA5',bg:'#E6F1FB',barColor:'#378ADD'},
-  {id:'ma',      name:'Massachusetts',offices:['andover','bradford','methuen','newburyport'],label:'Andover · Bradford · Methuen · Newburyport',color:'#993556',bg:'#FBEAF0',barColor:'#ED93B1'},
-  {id:'maine',   name:'Maine',        offices:['saco','kennebunk'],                           label:'Saco · Kennebunk',                           color:'#0F6E56',bg:'#E1F5EE',barColor:'#5DCAA5'},
+  {id:'seacoast',name:'Seacoast NH',  offices:['exeter','portsmouth'],                                   label:'Exeter · Portsmouth',                       color:'#185FA5',bg:'#E6F1FB',barColor:'#378ADD'},
+  {id:'ma',      name:'Massachusetts',offices:['andover','bradford','haverhill','methuen','newburyport'],label:'Andover · Haverhill · Methuen · Newburyport',color:'#993556',bg:'#FBEAF0',barColor:'#ED93B1'},
+  {id:'maine',   name:'Maine',        offices:['saco','biddeford','kennebunk'],                           label:'Biddeford · Kennebunk',                     color:'#0F6E56',bg:'#E1F5EE',barColor:'#5DCAA5'},
 ];
 const AVATAR_COLORS=[
   {bg:'#E1F5EE',color:'#0F6E56'},{bg:'#E6F1FB',color:'#185FA5'},
@@ -410,13 +424,14 @@ function showLoading(){
 }
 
 function loadFromDrive(){
-  fetch('https://script.google.com/macros/s/AKfycbxuZkW3zkNbcGYE3rrjq_q3HiF4Fv4GDZQ5qByvJfqay0C0ii7kzNKETccx2r4Amwz3/exec',{cache:'no-store'})
+  fetch('https://script.google.com/macros/s/AKfycbzuf0dhdV1PiQnOiD4O4OPe--OY2XZ2H6baQzk1jrDLW-4NMYpjFyMkm0c9WiXTv0B8/exec',{cache:'no-store'})
     .then(function(res){ return res.json(); })
     .then(function(data){
       if(data&&data.weeks&&data.weeks.length>0){
         _ytdData=data;
       }else{
         _ytdData=PRELOADED_DATA;
+        if(data&&data.announcements)_ytdData.announcements=data.announcements;
       }
       initDisplay();
     })
@@ -544,6 +559,30 @@ function parseMoney(str){if(!str)return 0;const n=parseFloat((str+'').replace(/[
 function fmtMoney(n){if(n>=1000000)return'$'+(n/1000000).toFixed(2)+'M';if(n>=1000)return'$'+Math.round(n/1000)+'K';return'$'+Math.round(n).toLocaleString();}
 function fmtPct(n){return n.toFixed(1)+'%';}
 function sideBreakdown(l,b,bo){const p=[];if(l)p.push(`${l} list side`);if(b)p.push(`${b} buy side`);if(bo)p.push(`${bo} both sides`);return p.length?' · '+p.join(' / '):''}
+function labelToDate(w){
+  var lbl=(w.label||'').trim();
+  var m=lbl.match(/([A-Za-z]+)\s+(\d+)/);
+  var yr=lbl.match(/(\d{4})/);
+  if(m&&yr){
+    var month=m[1];
+    var day=parseInt(m[2]);
+    var year=parseInt(yr[1]);
+    var d=new Date(month+' '+day+', '+year);
+    if(month.toLowerCase().startsWith('dec')&&year>=2026){
+      d=new Date(month+' '+day+', '+(year-1));
+    }
+    return d;
+  }
+  return new Date(w.loadedAt||0);
+}
+// Global week number = position when ALL weeks (published + pending) are
+// sorted chronologically by date — this matches the admin panel's numbering.
+function getGlobalWeekNumber(week){
+  var allWeeks=_ytdData.weeks||[];
+  var sorted=[...allWeeks].sort(function(a,b){return labelToDate(a)-labelToDate(b);});
+  var idx=sorted.findIndex(function(w){return w.label===week.label;});
+  return idx>=0?idx+1:'?';
+}
 function loadYTD(){return{weeks:_ytdData._publishedWeeks||_ytdData.weeks||[]};}
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -647,7 +686,7 @@ function sidePill(notes){
   return'';
 }
 function toSlug(str){return(str||'').toLowerCase().replace(/[#\/]/g,'').replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-');}
-function statePrefix(office){const o=(office||'').toLowerCase().trim();if(['saco','kennebunk'].includes(o))return'me';if(['andover','bradford','methuen','newburyport'].includes(o))return'ma';return'nh';}
+function statePrefix(office){const o=(office||'').toLowerCase().trim();if(['saco','biddeford','kennebunk'].includes(o))return'me';if(['andover','bradford','haverhill','methuen','newburyport'].includes(o))return'ma';return'nh';}
 function veraniUrl(d){const mls=(d.mls||'').trim().toUpperCase();if(!mls||mls==='NON-MLS')return null;return`https://www.verani.com/${statePrefix(d.office)}-real-estate/${toSlug(d.town)}/${toSlug(d.addr)}-mls-${mls.toLowerCase()}`;}
 
 function renderBuyerTable(buyerRows,appendTo){
@@ -829,6 +868,9 @@ function renderAgentListContent(el,agentMap,deals,regionId,regionColor,r,weekDea
   wlbHdrTop.addEventListener('click',toggleWlb);wlbHdrBottom.addEventListener('click',toggleWlb);
   wlbWrap.appendChild(wlbHdrTop);wlbWrap.appendChild(wlbPanel);wlbWrap.appendChild(wlbHdrBottom);
   el.appendChild(wlbWrap);
+
+  const kudosHtml=renderKudosPanelHtml(computeAutoKudos(list,weekDeals||window._currentWeekDeals||{},regionId),normalizeSpecialKudosStore((_ytdData||{}).specialKudos)[regionId]||[],r.color);
+  if(kudosHtml){const kudosHost=document.createElement('div');kudosHost.innerHTML=kudosHtml;el.appendChild(kudosHost.firstElementChild);}
 
   const weeklyYtdAgents={};
   list.forEach(a=>{
@@ -1048,6 +1090,9 @@ function renderSummary(agentMap,deals,containerId){
   wlbHdrTopS.addEventListener('click',toggleWlbS);wlbHdrBottomS.addEventListener('click',toggleWlbS);
   wlbWrapS.appendChild(wlbHdrTopS);wlbWrapS.appendChild(wlbPanelS);wlbWrapS.appendChild(wlbHdrBottomS);
   el.appendChild(wlbWrapS);
+  const summaryKudosStore=normalizeSpecialKudosStore((_ytdData||{}).specialKudos);
+  const summaryKudosHtml=renderKudosPanelHtml(computeAutoKudos(Object.values(agentMap),window._currentWeekDeals||{},null),[].concat(summaryKudosStore.seacoast||[],summaryKudosStore.ma||[],summaryKudosStore.maine||[]),'#534AB7');
+  if(summaryKudosHtml){const kudosHost=document.createElement('div');kudosHost.innerHTML=summaryKudosHtml;el.appendChild(kudosHost.firstElementChild);}
   const allWeeklyAgents={};
   Object.values(agentMap).forEach(a=>{
     const ak=(a.name||'').toLowerCase().trim();
@@ -1229,7 +1274,7 @@ function renderWeekNavBar(){
   const selWrap=document.createElement('div');selWrap.style.cssText='position:relative;flex:1;min-width:0';
   const sel=document.createElement('select');sel.style.cssText="width:100%;padding:5px 24px 5px 10px;border:1px solid #CECBF6;border-radius:8px;font-size:12px;font-weight:500;color:#534AB7;background:#fff;cursor:pointer;appearance:none;-webkit-appearance:none;font-family:'DM Sans',sans-serif";
   const curIdx=_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1;
-  ytd.weeks.forEach((w,i)=>{const opt=document.createElement('option');opt.value=i;opt.textContent='Wk '+(i+1)+' · '+w.label;if(i===curIdx)opt.selected=true;sel.appendChild(opt);});
+  ytd.weeks.forEach((w,i)=>{const opt=document.createElement('option');opt.value=i;opt.textContent='Wk '+getGlobalWeekNumber(w)+' · '+w.label;if(i===curIdx)opt.selected=true;sel.appendChild(opt);});
   const arr=document.createElement('div');arr.style.cssText='position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:#534AB7;font-size:9px';arr.textContent='▼';
   selWrap.appendChild(sel);selWrap.appendChild(arr);bar.appendChild(selWrap);
   const nextBtn=document.createElement('button');nextBtn.innerHTML='→';nextBtn.style.cssText='width:28px;height:28px;border-radius:50%;border:1px solid #CECBF6;background:#fff;font-size:13px;color:#534AB7;cursor:pointer;flex-shrink:0;transition:background .15s';
@@ -1241,6 +1286,7 @@ function renderWeekNavBar(){
     _currentWeekIdx=idx;const w=y.weeks[idx];
     window._currentWeekDeals=w.weekDeals||{};window._currentAgents=w.agents||{};window._currentBuyerRows=w.buyerRows||[];
     updateStatsBar(w.agents||{},w.deals||[]);
+    renderAnnouncements(normalizeAnnouncementsStore((_ytdData||{}).announcements));
     renderSummary(w.agents||{},w.deals||[],'summary-content');
     renderYTDStandingsForWeek(idx);
     REGIONS.forEach(r=>renderAgentList(r.id+'-content',w.agents||{},w.deals||[],r.id,r.color));
@@ -1252,9 +1298,168 @@ function renderWeekNavBar(){
   sel.addEventListener('change',function(){goToWeek(parseInt(this.value));});
 }
 
+// ── Announcements: independent of week data, run on their own start/end date-time ──
+// Stored top-level in Drive as {company:[...], seacoast:[...], ma:[...], maine:[...]}.
+// Each entry: {id, text, startAt, endAt, createdAt, updatedAt}. startAt/endAt are
+// datetime-local strings, or '' meaning "no bound" (starts now / never expires).
+const ANNOUNCEMENT_BANNERS=[
+  {key:'company', label:'📢 Company', bg:'#552448', color:'#fff'},
+  {key:'seacoast', label:'🌊 Seacoast NH', bg:'#185FA5', color:'#fff'},
+  {key:'ma', label:'🍁 Massachusetts', bg:'#993556', color:'#fff'},
+  {key:'maine', label:'🌲 Maine', bg:'#0F6E56', color:'#fff'},
+];
+function normalizeAnnouncementsStore(raw){
+  const store={company:[],seacoast:[],ma:[],maine:[]};
+  if(raw&&typeof raw==='object'){
+    ['company','seacoast','ma','maine'].forEach(function(k){
+      if(Array.isArray(raw[k])) store[k]=raw[k].filter(Boolean);
+    });
+  }
+  return store;
+}
+function isAnnouncementActive(entry,now){
+  now=now||new Date();
+  if(entry.startAt){const s=new Date(entry.startAt);if(!isNaN(s)&&now<s)return false;}
+  if(entry.endAt){const e=new Date(entry.endAt);if(!isNaN(e)&&now>e)return false;}
+  return true;
+}
+function pickActiveAnnouncement(list){
+  if(!Array.isArray(list))return null;
+  const now=new Date();
+  const active=list.filter(function(a){return a&&a.text&&isAnnouncementActive(a,now);});
+  if(!active.length)return null;
+  active.sort(function(a,b){return new Date(b.updatedAt||b.createdAt||0)-new Date(a.updatedAt||a.createdAt||0);});
+  return active[0];
+}
+// Measures one copy of the (duplicated) ticker text and sets a duration so
+// scroll speed stays consistent regardless of message length. Always
+// scrolls continuously, even for short messages, like a real ticker.
+function setupTickerScroll(moveEl){
+  requestAnimationFrame(function(){
+    const seg=moveEl.querySelector('.ticker-seg');
+    if(!seg)return;
+    const segWidth=seg.getBoundingClientRect().width;
+    const MIN_SEG_WIDTH=200; // keep short messages from looping too fast
+    const PIXELS_PER_SECOND=55;
+    const duration=Math.max(segWidth,MIN_SEG_WIDTH)/PIXELS_PER_SECOND;
+    moveEl.style.animationDuration=duration+'s';
+    moveEl.classList.add('is-animating');
+  });
+}
+// Renders whichever announcements are active right now for each region.
+// Independent of which week is being viewed — a banner runs on its own
+// start/end date regardless of the scoreboard's current week.
+function renderAnnouncements(store){
+  const wrap=document.getElementById('announcements-wrap');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  ANNOUNCEMENT_BANNERS.forEach(function(b){
+    const entry=pickActiveAnnouncement((store||{})[b.key]);
+    if(!entry)return;
+    const text=(entry.text||'').trim();
+    if(!text)return;
+    const ticker=document.createElement('div');
+    ticker.className='ticker-wrap';
+    ticker.style.background=b.bg;
+    ticker.style.borderRadius='8px';
+    ticker.innerHTML=`
+      <div class="ticker-inner">
+        <span class="ticker-label" style="color:${b.color};border-right:1px solid rgba(255,255,255,0.3)">${b.label}</span>
+        <div class="ticker-track">
+          <div class="ticker-move">
+            <span class="ticker-seg" style="color:${b.color}">${text}</span>
+            <span class="ticker-seg" style="color:${b.color}">${text}</span>
+          </div>
+        </div>
+      </div>`;
+    wrap.appendChild(ticker);
+    setupTickerScroll(ticker.querySelector('.ticker-move'));
+  });
+}
+// Re-check active/expired status once a minute so a banner appears or
+// disappears on its own at the set time, even if the page is left open.
+setInterval(function(){renderAnnouncements(normalizeAnnouncementsStore((_ytdData||{}).announcements));},60000);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// KUDOS (read-only display) — auto-computed weekly categories + hand-picked
+// special kudos curated in the admin. See the admin file for how these are
+// authored; this just renders whatever's currently active.
+// ═══════════════════════════════════════════════════════════════════════════════
+function normalizeSpecialKudosStore(raw){
+  const store={seacoast:[],ma:[],maine:[]};
+  if(raw&&typeof raw==='object'){
+    ['seacoast','ma','maine'].forEach(function(k){
+      if(Array.isArray(raw[k])) store[k]=raw[k].filter(Boolean);
+    });
+  }
+  return store;
+}
+function isKudosActive(entry,now){
+  now=now||new Date();
+  if(entry.startAt){const s=new Date(entry.startAt);if(!isNaN(s)&&now<s)return false;}
+  if(entry.endAt){const e=new Date(entry.endAt);if(!isNaN(e)&&now>e)return false;}
+  return true;
+}
+function activeSpecialKudos(list){
+  if(!Array.isArray(list))return [];
+  const now=new Date();
+  return list.filter(function(k){return k&&k.name&&isKudosActive(k,now);});
+}
+function allSpecialKudosCombined(store){
+  store=store||{};
+  return [].concat(store.seacoast||[],store.ma||[],store.maine||[]);
+}
+function computeAutoKudos(list,weekDeals,regionId){
+  let mostClosings=null,highestVolume=null,buyerLeader=null,mostNewListings=null;
+  (list||[]).forEach(function(a){
+    const closings=a.closed||0;
+    if(closings>0&&(!mostClosings||closings>mostClosings.value))mostClosings={name:a.name,value:closings};
+    const volume=(typeof a.dedupVolume==='number')?a.dedupVolume:(a.newLVal||0)+(a.pendVal||0)+(a.closedVal||0);
+    if(volume>0&&(!highestVolume||volume>highestVolume.value))highestVolume={name:a.name,value:volume};
+    const buyer=a.buyer||0;
+    if(buyer>0&&(!buyerLeader||buyer>buyerLeader.value))buyerLeader={name:a.name,value:buyer};
+    const newL=a.newL||0;
+    if(newL>0&&(!mostNewListings||newL>mostNewListings.value))mostNewListings={name:a.name,value:newL};
+  });
+  let biggestSale=null;
+  Object.values(weekDeals||{}).forEach(function(d){
+    if(d.status!=='CLOSED'||!(d.soldP>0))return;
+    if(regionId&&d.regionId!==regionId)return;
+    if(!biggestSale||d.soldP>biggestSale.soldP)biggestSale={name:d.name,soldP:d.soldP};
+  });
+  if(!mostClosings&&!highestVolume&&!buyerLeader&&!mostNewListings&&!biggestSale)return null;
+  return {mostClosings,highestVolume,buyerLeader,mostNewListings,biggestSale};
+}
+function renderKudosPanelHtml(autoKudos,specialList,accentColor){
+  const cards=[];
+  if(autoKudos){
+    if(autoKudos.mostClosings)cards.push({icon:'🏆',label:'Most closings',name:autoKudos.mostClosings.name,detail:autoKudos.mostClosings.value+' closing'+(autoKudos.mostClosings.value!==1?'s':'')});
+    if(autoKudos.highestVolume)cards.push({icon:'💰',label:'Highest volume',name:autoKudos.highestVolume.name,detail:fmtMoney(autoKudos.highestVolume.value)});
+    if(autoKudos.buyerLeader)cards.push({icon:'🎯',label:'Buyer contracts',name:autoKudos.buyerLeader.name,detail:autoKudos.buyerLeader.value+' agreement'+(autoKudos.buyerLeader.value!==1?'s':'')});
+    if(autoKudos.mostNewListings)cards.push({icon:'📋',label:'Most new listings',name:autoKudos.mostNewListings.name,detail:autoKudos.mostNewListings.value+' listing'+(autoKudos.mostNewListings.value!==1?'s':'')});
+    if(autoKudos.biggestSale)cards.push({icon:'🔥',label:'Biggest sale',name:autoKudos.biggestSale.name,detail:fmtMoney(autoKudos.biggestSale.soldP)});
+  }
+  const activeSpecial=activeSpecialKudos(specialList);
+  if(!cards.length&&!activeSpecial.length)return '';
+  const cardsHtml=cards.map(function(it){
+    return `<div style="background:#fff;border-radius:10px;padding:10px 12px;border:1px solid #e2e0d8;"><div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#888780;margin-bottom:4px">${it.icon} ${it.label}</div><div style="font-size:13px;font-weight:500;color:#1a1a18">${it.name}</div><div style="font-size:11px;color:#5F5E5A">${it.detail}</div></div>`;
+  }).join('');
+  const specialHtml=activeSpecial.map(function(k){
+    return `<p style="font-size:12px;margin:0;padding-top:6px;">🌟 <strong>${k.name}</strong> — ${k.detail||''}</p>`;
+  }).join('');
+  return `<div style="margin-top:8px;border-radius:10px;overflow:hidden;border:1px solid ${accentColor}30;">
+    <div style="padding:8px 14px;background:${accentColor}10;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:${accentColor}">🎉 This week's kudos</div>
+    <div style="padding:10px 14px;background:#fff;">
+      ${cardsHtml?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;${specialHtml?'margin-bottom:8px;':''}">${cardsHtml}</div>`:''}
+      ${specialHtml?`<div style="display:flex;flex-direction:column;gap:4px;${cardsHtml?'padding-top:6px;border-top:1px dashed #e2e0d8;':''}">${specialHtml}</div>`:''}
+    </div>
+  </div>`;
+}
+
 function renderAll(agentMap,deals,weekDeals){
   window._currentWeekDeals=weekDeals||{};window._currentAgents=agentMap||{};window._currentBuyerRows=window._currentBuyerRows||[];
   updateStatsBar(agentMap,deals);renderWeekNavBar();
+  renderAnnouncements(normalizeAnnouncementsStore((_ytdData||{}).announcements));
   const existingBanner=document.querySelector('.detail-banner');if(existingBanner)existingBanner.remove();
   renderSummary(agentMap,deals,'summary-content');
   if(existingBanner){const summaryEl=document.getElementById('summary-content');const newBanner=summaryEl.querySelector('.detail-banner');if(newBanner)newBanner.replaceWith(existingBanner);else summaryEl.appendChild(existingBanner);}
