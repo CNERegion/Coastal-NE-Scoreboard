@@ -636,6 +636,33 @@ function sanitizeWeekData(weeks){
   });
 }
 
+// pruneSupersededDeals: if the same MLS# has both a PEND and a FALL THRU row in the same
+// week's report, the property didn't stay pending -- drop the stale PEND row (the FALL THRU
+// row itself stays visible in the Withdrawn/Fall Thru section, so nothing is hidden, just
+// de-duplicated). Same idea for a NEW listing that was also WITHDRAWN or TERMINATED that week.
+function pruneSupersededDeals(weekDeals){
+  const byMls={};
+  Object.entries(weekDeals).forEach(([dk,d])=>{
+    const m=(d.mls||'').trim().toUpperCase();
+    if(!m||m==='NON-MLS')return;
+    if(!byMls[m])byMls[m]=[];
+    byMls[m].push(dk);
+  });
+  Object.values(byMls).forEach(dks=>{
+    const fallThruKeys=dks.filter(dk=>weekDeals[dk].status==='FALL THRU');
+    const pendKeys=dks.filter(dk=>weekDeals[dk].status==='PEND');
+    if(fallThruKeys.length&&pendKeys.length){
+      pendKeys.forEach(dk=>delete weekDeals[dk]);
+      fallThruKeys.forEach(dk=>{weekDeals[dk]._sameWeekSupersede=true;});
+    }
+    const closedOutKeys=dks.filter(dk=>weekDeals[dk]&&['WITHDRAWN','TERMINATED'].includes(weekDeals[dk].status));
+    const newKeys=dks.filter(dk=>weekDeals[dk]&&weekDeals[dk].status==='NEW');
+    if(closedOutKeys.length&&newKeys.length){
+      newKeys.forEach(dk=>delete weekDeals[dk]);
+    }
+  });
+}
+
 function parseTransactions(tsv,weekLabel){
   const rows=parseTSV(tsv);const agents={};const deals=[];const weekDeals={};
   rows.forEach(r=>{
@@ -667,6 +694,7 @@ function parseTransactions(tsv,weekLabel){
       weekDeals[dk]={status,name,office,mls:mls.trim(),addr:r['address']||'',town:r['town']||'',notes:notes,listP:parseMoney(r['list price']),soldP:parseMoney(r['sold price']),date:r['timestamp']||r['notes']||'',regionId:getRegionId(office),dk};
     }
   });
+  pruneSupersededDeals(weekDeals);
   Object.values(weekDeals).forEach(d=>{
     const{status,name,office,notes,listP,soldP,dk}=d;
     const isBoth=notes.includes('both sides');const isListSide=notes.includes('list side')||isBoth;const isBuySide=notes.includes('buy side')||isBoth;
@@ -676,7 +704,7 @@ function parseTransactions(tsv,weekLabel){
     else if(status==='PEND'){agents[key].pend+=count;agents[key].pendVal+=listP;if(isBoth)agents[key].pendBoth+=1;else if(isListSide)agents[key].pendList+=1;else if(isBuySide)agents[key].pendBuy+=1;}
     else if(status==='NEW'){agents[key].newL+=count;agents[key].newLVal+=listP;}
     else if(status==='WITHDRAWN'||status==='TERMINATED'){agents[key].withdrawn+=1;}
-    else if(status==='FALL THRU'){agents[key].pend=Math.max(0,agents[key].pend-count);}
+    else if(status==='FALL THRU'){if(!d._sameWeekSupersede)agents[key].pend=Math.max(0,agents[key].pend-count);}
     if(['CLOSED','PEND','NEW'].includes(status))deals.push({status,regionId,listP,soldP,isBoth,count,dk});
   });
   return{agents,deals,weekDeals};
@@ -877,8 +905,9 @@ function renderAgentList(containerId,agentMap,deals,regionId,regionColor){
 
 function renderAgentListContent(el,agentMap,deals,regionId,regionColor,r,weekDeals){
   el.innerHTML='';const list=Object.values(agentMap).filter(a=>a.regionId===regionId).sort((a,b)=>weeklyScore(b)-weeklyScore(a));
-  const stats={closed:0,pend:0,newL:0,buyer:0,buyerAgency:0,showing:0,facilitator:0};
-  list.forEach(a=>{stats.closed+=a.closed;stats.pend+=a.pend;stats.newL+=a.newL;stats.buyer+=a.buyer;stats.buyerAgency+=(a.buyerAgency||0);stats.showing+=(a.showing||0);stats.facilitator+=(a.facilitator||0);});
+  const rDeals=(deals||[]).filter(d=>d.regionId===regionId);const cntByStatus=st=>rDeals.filter(d=>d.status===st).reduce((s,d)=>s+(d.count||1),0);
+  const stats={closed:cntByStatus('CLOSED'),pend:cntByStatus('PEND'),newL:cntByStatus('NEW'),buyer:0,buyerAgency:0,showing:0,facilitator:0};
+  list.forEach(a=>{stats.buyer+=a.buyer;stats.buyerAgency+=(a.buyerAgency||0);stats.showing+=(a.showing||0);stats.facilitator+=(a.facilitator||0);});
   const rbrs=(window._currentBuyerRows||[]).filter(br=>br.regionId===regionId);
   if(rbrs.length){stats.buyerAgency=rbrs.filter(br=>br.typeLabel==='agency').length;stats.showing=rbrs.filter(br=>br.typeLabel==='showing').length;stats.facilitator=rbrs.filter(br=>br.typeLabel==='facilitator').length;}
   const money=calcRegionMoney(deals,regionId);el.appendChild(renderRegionHeader(r,stats,money));
@@ -935,7 +964,7 @@ function renderYTDAgentLeaderboard(containerId,ytdAgents,weeks){
 
 function renderSummary(agentMap,deals,containerId){
   const el=document.getElementById(containerId);el.innerHTML='';
-  const allStats=REGIONS.map(r=>{const list=Object.values(agentMap).filter(a=>a.regionId===r.id);const money=calcRegionMoney(deals,r.id);const brs=(window._currentBuyerRows||[]).filter(br=>br.regionId===r.id);const brAgency=brs.filter(br=>br.typeLabel==='agency').length;const brShowing=brs.filter(br=>br.typeLabel==='showing').length;const brFacilitator=brs.filter(br=>br.typeLabel==='facilitator').length;return{...r,stats:{closed:list.reduce((s,a)=>s+(a.closed||0),0),pend:list.reduce((s,a)=>s+(a.pend||0),0),newL:list.reduce((s,a)=>s+(a.newL||0),0),buyer:list.reduce((s,a)=>s+(a.buyer||0),0),buyerAgency:brAgency||list.reduce((s,a)=>s+(a.buyerAgency||0),0),showing:brShowing||list.reduce((s,a)=>s+(a.showing||0),0),facilitator:brFacilitator||list.reduce((s,a)=>s+(a.facilitator||0),0),pts:list.reduce((s,a)=>s+weeklyScore(a),0)},money};});
+  const allStats=REGIONS.map(r=>{const list=Object.values(agentMap).filter(a=>a.regionId===r.id);const money=calcRegionMoney(deals,r.id);const rDeals=(deals||[]).filter(d=>d.regionId===r.id);const cntByStatus=st=>rDeals.filter(d=>d.status===st).reduce((s,d)=>s+(d.count||1),0);const brs=(window._currentBuyerRows||[]).filter(br=>br.regionId===r.id);const brAgency=brs.filter(br=>br.typeLabel==='agency').length;const brShowing=brs.filter(br=>br.typeLabel==='showing').length;const brFacilitator=brs.filter(br=>br.typeLabel==='facilitator').length;return{...r,stats:{closed:cntByStatus('CLOSED'),pend:cntByStatus('PEND'),newL:cntByStatus('NEW'),buyer:list.reduce((s,a)=>s+(a.buyer||0),0),buyerAgency:brAgency||list.reduce((s,a)=>s+(a.buyerAgency||0),0),showing:brShowing||list.reduce((s,a)=>s+(a.showing||0),0),facilitator:brFacilitator||list.reduce((s,a)=>s+(a.facilitator||0),0),pts:list.reduce((s,a)=>s+weeklyScore(a),0)},money};});
   const maxPts=Math.max(...allStats.map(r=>r.stats.pts),1);
   const grid=document.createElement('div');grid.className='summary-grid';
   allStats.forEach(r=>{const s=r.stats,m=r.money,isLeader=s.pts===maxPts&&s.pts>0;const card=document.createElement('div');card.className='summary-card';card.style.cssText=`background:${r.bg};border-color:${r.bg}`;card.onclick=()=>{const tabs=document.querySelectorAll('.tab');showTab(r.id,tabs[REGIONS.findIndex(x=>x.id===r.id)+1],r.color);};
