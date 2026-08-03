@@ -652,8 +652,28 @@ function pruneSupersededDeals(weekDeals){
     const fallThruKeys=dks.filter(dk=>weekDeals[dk].status==='FALL THRU');
     const pendKeys=dks.filter(dk=>weekDeals[dk].status==='PEND');
     if(fallThruKeys.length&&pendKeys.length){
-      pendKeys.forEach(dk=>delete weekDeals[dk]);
-      fallThruKeys.forEach(dk=>{weekDeals[dk]._sameWeekSupersede=true;});
+      // For each Fall Thru on this MLS#, check whether any Pend for the same MLS# came AFTER it.
+      //   - Pend came BEFORE (or same time as) the Fall Thru -> stale pending, same deal just died.
+      //     Drop that Pend row entirely; the Fall Thru is the only thing that should show.
+      //   - Pend came AFTER the Fall Thru -> the deal died, then went back under agreement again
+      //     that same week (almost certainly a different buyer/cobroke). Keep BOTH rows visible
+      //     on the weekly card/table -- but mark the Fall Thru so it doesn't cancel out the fresh
+      //     Pend when agent/YTD totals are tallied, so this MLS# is only counted once (as Pending).
+      fallThruKeys.forEach(ftk=>{
+        const ft=weekDeals[ftk];
+        const ftDate=new Date(ft.date);
+        const ftValid=!isNaN(ftDate);
+        const stalePendKeys=pendKeys.filter(pk=>{
+          const p=weekDeals[pk];
+          if(!p)return false;
+          const pDate=new Date(p.date);
+          const pValid=!isNaN(pDate);
+          // Treat as stale (superseded) unless we can prove the Pend is strictly later.
+          return !(ftValid&&pValid&&pDate>ftDate);
+        });
+        stalePendKeys.forEach(pk=>{delete weekDeals[pk];});
+        ft._sameWeekSupersede=true;
+      });
     }
     const closedOutKeys=dks.filter(dk=>weekDeals[dk]&&['WITHDRAWN','TERMINATED'].includes(weekDeals[dk].status));
     const newKeys=dks.filter(dk=>weekDeals[dk]&&weekDeals[dk].status==='NEW');
