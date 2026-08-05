@@ -1171,17 +1171,34 @@ function renderYTD(){
   el.appendChild(standings);
 
   // ── YTD AGENT LEADERBOARD ────────────────────────────────────────────────
-  const ytdAgents=buildYTDAgents(ytd.weeks);
   const lbWrap=document.createElement('div');lbWrap.style.cssText='margin-top:12px;border-radius:10px;border:1px solid #e2e0d8;overflow:hidden;background:#fff';
   const lbHdrTop=document.createElement('div');lbHdrTop.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#fafaf8;border-bottom:1px solid #e2e0d8;cursor:pointer;user-select:none';
   lbHdrTop.innerHTML='<div class="ytd-section-title" style="margin:0;border:none;padding:0">YTD Agent Leaderboard</div><span id="ytd-lb-toggle" style="font-size:11px;color:#888780">▼ Show</span>';
+  const lbPillRow=document.createElement('div');lbPillRow.style.cssText='display:none;gap:6px;flex-wrap:wrap;padding:8px 14px;background:#fafaf8;border-bottom:1px solid #e2e0d8';
   const lbBoard=document.createElement('div');lbBoard.id='ytd-agent-board';lbBoard.style.cssText='padding:10px 14px;display:none';
   const lbHdrBottom=document.createElement('div');lbHdrBottom.style.cssText='display:none;align-items:center;justify-content:center;padding:8px 14px;background:#fafaf8;border-top:1px solid #e2e0d8;cursor:pointer;user-select:none';
   lbHdrBottom.innerHTML='<span style="font-size:11px;color:#888780">▲ Hide YTD Agent Leaderboard</span>';
-  let lbOpen=false,lbBuilt=false;
-  function toggleLb(){lbOpen=!lbOpen;lbBoard.style.display=lbOpen?'block':'none';lbHdrBottom.style.display=lbOpen?'flex':'none';document.getElementById('ytd-lb-toggle').textContent=lbOpen?'▲ Hide':'▼ Show';if(lbOpen&&!lbBuilt){renderYTDAgentLeaderboard('ytd-agent-board',ytdAgents,ytd.weeks);lbBuilt=true;}}
+  let lbOpen=false,lbFilter=null;
+  function buildLbBoard(filterRegionId){lbBoard.innerHTML='';renderYTDAgentLeaderboard('ytd-agent-board',buildYTDAgents(ytd.weeks,filterRegionId||undefined),ytd.weeks);}
+  function toggleLb(){lbOpen=!lbOpen;lbPillRow.style.display=lbOpen?'flex':'none';lbBoard.style.display=lbOpen?'block':'none';lbHdrBottom.style.display=lbOpen?'flex':'none';document.getElementById('ytd-lb-toggle').textContent=lbOpen?'▲ Hide':'▼ Show';if(lbOpen)buildLbBoard(lbFilter);}
   lbHdrTop.addEventListener('click',toggleLb);lbHdrBottom.addEventListener('click',toggleLb);
-  lbWrap.appendChild(lbHdrTop);lbWrap.appendChild(lbBoard);lbWrap.appendChild(lbHdrBottom);
+  const lbPillDefs=[{label:'Regional Summary',regionId:null,bg:'#1a1a18'},...REGIONS.map(r=>({label:r.name,regionId:r.id,bg:r.color}))];
+  lbPillDefs.forEach(f=>{
+    const pill=document.createElement('button');
+    pill.textContent=f.label;
+    pill.style.cssText=`font-size:12px;font-weight:500;padding:4px 14px;border-radius:20px;border:2px solid transparent;cursor:pointer;font-family:'DM Sans',sans-serif;background:${f.bg};color:#fff;transition:all .15s`;
+    pill.onclick=(e)=>{
+      e.stopPropagation();
+      lbFilter=f.regionId;
+      lbPillRow.querySelectorAll('button').forEach(p=>{p.style.border='2px solid transparent';p.style.boxShadow='none';});
+      pill.style.border='2px solid #fff';pill.style.boxShadow='0 0 0 2px rgba(0,0,0,0.2)';
+      buildLbBoard(lbFilter);
+    };
+    lbPillRow.appendChild(pill);
+  });
+  lbPillRow.querySelector('button').style.border='2px solid #fff';
+  lbPillRow.querySelector('button').style.boxShadow='0 0 0 2px rgba(0,0,0,0.2)';
+  lbWrap.appendChild(lbHdrTop);lbWrap.appendChild(lbPillRow);lbWrap.appendChild(lbBoard);lbWrap.appendChild(lbHdrBottom);
   el.appendChild(lbWrap);
 }
 
