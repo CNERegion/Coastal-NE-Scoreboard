@@ -543,6 +543,7 @@ function weeklyScore(a){return(a.closed||0)+(a.pend||0)+(a.newL||0)+(a.buyer||0)
 function initials(name){const p=(name||'').trim().split(/\s+/);return p.length===1?p[0].substring(0,2).toUpperCase():(p[0][0]+p[p.length-1][0]).toUpperCase();}
 function parseMoney(str){if(!str)return 0;const n=parseFloat((str+'').replace(/[$,\s]/g,''));return isNaN(n)?0:n;}
 function fmtMoney(n){if(n>=1000000)return'$'+(n/1000000).toFixed(2)+'M';if(n>=1000)return'$'+Math.round(n/1000)+'K';return'$'+Math.round(n).toLocaleString();}
+function fmtDealDate(dateStr){const d=new Date(dateStr);if(isNaN(d))return'—';return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 function fmtPct(n){return n.toFixed(1)+'%';}
 function sideBreakdown(l,b,bo){const p=[];if(l)p.push(`${l} list side`);if(b)p.push(`${b} buy side`);if(bo)p.push(`${bo} both sides`);return p.length?' · '+p.join(' / '):''}
 function loadYTD(){return{weeks:_ytdData._publishedWeeks||_ytdData.weeks||[]};}
@@ -712,7 +713,7 @@ function renderDealSection(key,sect,appendTo){
   const tblWrap=document.createElement('div');tblWrap.style.cssText='overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;position:relative';
   const fadeEl=document.createElement('div');fadeEl.className='scroll-fade-overlay';fadeEl.style.cssText='position:absolute;right:0;top:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,rgba(255,255,255,0.85));pointer-events:none;z-index:1';tblWrap.appendChild(fadeEl);tblWrap.addEventListener('scroll',function(){if(this.scrollLeft>10)fadeEl.style.display='none';});
   const tbl=document.createElement('table');tbl.className='detail-table';
-  tbl.innerHTML=`<thead><tr><th>Agent</th><th>Address</th><th>Town</th><th>MLS #</th><th>List $</th>${isClosed?'<th>Sold $</th>':''}<th>Side</th></tr></thead>`;
+  tbl.innerHTML=`<thead><tr><th>Agent</th><th>Address</th><th>Town</th><th>MLS #</th><th>List $</th>${isClosed?'<th>Sold $</th>':''}<th>Side</th><th>Date</th></tr></thead>`;
   const tbody=document.createElement('tbody');
   sect.deals.sort((a,b)=>{const da=new Date(a.date),db=new Date(b.date);const va=isNaN(da)?Infinity:da.getTime();const vb=isNaN(db)?Infinity:db.getTime();return va!==vb?va-vb:a.name.localeCompare(b.name);}).forEach(d=>{
     const url=veraniUrl(d);
@@ -726,7 +727,7 @@ function renderDealSection(key,sect,appendTo){
         <td>${mlsCell}</td>
         <td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>
         ${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}
-        <td><span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#E6F1FB;color:#185FA5">List</span></td>`;
+        <td><span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#E6F1FB;color:#185FA5">List</span></td><td style="font-size:12px;color:#5F5E5A;white-space:nowrap">${fmtDealDate(d.date)}</td>`;
       tbody.appendChild(tr1);
       const tr2=document.createElement('tr');
       tr2.innerHTML=`<td><div class="detail-agent">${d.name}</div></td>
@@ -735,7 +736,7 @@ function renderDealSection(key,sect,appendTo){
         <td>${mlsCell}</td>
         <td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>
         ${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}
-        <td><span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#EEEDFE;color:#534AB7">Buy</span></td>`;
+        <td><span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#EEEDFE;color:#534AB7">Buy</span></td><td style="font-size:12px;color:#5F5E5A;white-space:nowrap">${fmtDealDate(d.date)}</td>`;
       tbody.appendChild(tr2);
     }else{
       const tr=document.createElement('tr');
@@ -745,7 +746,7 @@ function renderDealSection(key,sect,appendTo){
         <td>${mlsCell}</td>
         <td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>
         ${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}
-        <td>${sidePill(d.notes)}</td>`;
+        <td>${sidePill(d.notes)}</td><td style="font-size:12px;color:#5F5E5A;white-space:nowrap">${fmtDealDate(d.date)}</td>`;
       tbody.appendChild(tr);
     }
   });
