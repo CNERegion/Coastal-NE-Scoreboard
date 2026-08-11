@@ -482,6 +482,7 @@ const STRIP_FROM_JOINT=['donna mahoney','simon verkaik','lynne pinette','lorna g
 const AGENT_ALIASES={
   'jill colby re':'Jill Colby Re',
   'michelle daoust':"Michelle D'Aoust",
+  'michaelle daoust':"Michelle D'Aoust",
   'erica dissel':'Erica Van Dissel',
   'erica van dissel':'Erica Van Dissel',
   'susan haberstroh':'Sue Haberstroh',
@@ -565,8 +566,9 @@ function buildYTDAgents(weeks,filterRegionId){
     const weekNewPts={};
     Object.entries(week.weekDeals||{}).forEach(([dk,d])=>{
       if(isExcluded(d.name))return;
-      const ak=agentKey(d.name);
-      if(!agentMeta[ak])agentMeta[ak]={name:d.name,office:d.office,regionId:getRegionIdForAgent(d.name,d.office)};
+      const cleanName=cleanAgentName(d.name);
+      const ak=agentKey(cleanName);
+      if(!agentMeta[ak])agentMeta[ak]={name:cleanName,office:d.office,regionId:getRegionIdForAgent(d.name,d.office)};
       if(!agentPts[ak])agentPts[ak]=0;
       if(!agentWeeklyPts[ak])agentWeeklyPts[ak]=new Array(weeks.length).fill(0);
       if(!registry[dk]&&['CLOSED','PEND','NEW'].includes(d.status)){
@@ -579,8 +581,9 @@ function buildYTDAgents(weeks,filterRegionId){
     Object.values(week.agents||{}).forEach(a=>{
       if(!a.buyer)return;
       if(isExcluded(a.name))return;
-      const ak=agentKey(a.name);
-      if(!agentMeta[ak])agentMeta[ak]={name:a.name,office:a.office,regionId:getRegionIdForAgent(a.name,a.office)};
+      const cleanBuyerName=cleanAgentName(a.name);
+      const ak=agentKey(cleanBuyerName);
+      if(!agentMeta[ak])agentMeta[ak]={name:cleanBuyerName,office:a.office,regionId:getRegionIdForAgent(a.name,a.office)};
       if(!agentPts[ak])agentPts[ak]=0;
       if(!agentWeeklyPts[ak])agentWeeklyPts[ak]=new Array(weeks.length).fill(0);
       if(!agentBuyer[ak])agentBuyer[ak]=0;
@@ -711,7 +714,7 @@ function renderDealSection(key,sect,appendTo){
   const tbl=document.createElement('table');tbl.className='detail-table';
   tbl.innerHTML=`<thead><tr><th>Agent</th><th>Address</th><th>Town</th><th>MLS #</th><th>List $</th>${isClosed?'<th>Sold $</th>':''}<th>Side</th></tr></thead>`;
   const tbody=document.createElement('tbody');
-  sect.deals.sort((a,b)=>a.name.localeCompare(b.name)).forEach(d=>{
+  sect.deals.sort((a,b)=>{const da=new Date(a.date),db=new Date(b.date);const va=isNaN(da)?Infinity:da.getTime();const vb=isNaN(db)?Infinity:db.getTime();return va!==vb?va-vb:a.name.localeCompare(b.name);}).forEach(d=>{
     const url=veraniUrl(d);
     const mlsCell=url?`<a href="${url}" target="_blank" style="color:#185FA5;font-weight:500;text-decoration:none;font-size:11px">${d.mls} ↗</a>`:`<span style="color:#aaa9a2;font-size:11px">${d.mls||'—'}</span>`;
     const isBothSides=dealIsBoth(d);

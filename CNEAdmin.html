@@ -554,7 +554,26 @@ function updatePublishStatusBar(){
     sub.textContent=`Publishes ${pub.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})} at 5:00 PM ET`;
     const prevBtn=document.createElement('button');prevBtn.className='btn btn-preview';prevBtn.style.padding='6px 14px';prevBtn.style.fontSize='12px';
     prevBtn.textContent='👁 Preview';prevBtn.onclick=previewPending;actions.appendChild(prevBtn);
+    const pubBtn=document.createElement('button');pubBtn.className='btn btn-primary';pubBtn.style.padding='6px 14px';pubBtn.style.fontSize='12px';
+    pubBtn.textContent='🚀 Publish Now';pubBtn.onclick=publishNow;actions.appendChild(pubBtn);
   }
+}
+
+// publishNow: overrides the scheduled Monday-5pm publishAt for the most recent (pending) week,
+// making it live on the public Scoreboard immediately. Every other week is untouched -- the
+// default Monday 5pm auto-publish behavior still applies to any week you don't explicitly push.
+function publishNow(){
+  const weeks=_ytdData.weeks||[];
+  if(!weeks.length)return;
+  const lastWeek=weeks[weeks.length-1];
+  if(isPublished(lastWeek)){setMsg('This week is already live.','#BA7517');return;}
+  if(!confirm('Publish "'+lastWeek.label+'" live right now, ahead of the scheduled Monday 5:00 PM ET time?'))return;
+  lastWeek.publishAt=new Date().toISOString();
+  writeToDrive({weeks:weeks}).then(function(){
+    setMsg('✓ "'+lastWeek.label+'" is now live on the public Scoreboard.','#1D9E75');
+    updatePublishStatusBar();
+    if(typeof renderWeeksLoaded==='function')renderWeeksLoaded();
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -638,6 +657,7 @@ const STRIP_FROM_JOINT=['donna mahoney','simon verkaik','lynne pinette','lorna g
 const AGENT_ALIASES={
   'jill colby re':'Jill Colby Re',
   'michelle daoust':"Michelle D'Aoust",
+  'michaelle daoust':"Michelle D'Aoust",
   'erica dissel':'Erica Van Dissel',
   'erica van dissel':'Erica Van Dissel',
   'susan haberstroh':'Sue Haberstroh',
@@ -870,7 +890,7 @@ function loadWeek(){
       var existingIdx=weeks.findIndex(function(w){return w.label===label;});
       var weekEntry={label:label,loadedAt:new Date().toISOString(),publishAt:publishAt,agents:agentMap,deals:deals,weekDeals:weekDeals,buyerRows:buyerRows};
       if(existingIdx>=0)weeks[existingIdx]=weekEntry;else weeks.push(weekEntry);
-      weeks.sort(function(a,b){return new Date(a.loadedAt)-new Date(b.loadedAt);});
+      weeks.sort(function(a,b){return labelToDate(a)-labelToDate(b);}); // sort by the week's actual calendar date, not upload order -- so re-uploading an older week (e.g. after a delete-and-reupload fix) still lands it in the right chronological spot
       return writeToDrive({weeks:weeks}).then(function(){return weeks;});
     })
     .then(function(weeks){
@@ -913,12 +933,12 @@ function buildYTDAgents(weeks,filterRegionId){
   weeks.forEach((week,wi)=>{
     const weekNewPts={};
     Object.entries(week.weekDeals||{}).forEach(([dk,d])=>{
-      const ak=agentKey(d.name);if(!agentMeta[ak])agentMeta[ak]={name:d.name,office:d.office,regionId:getRegionIdForAgent(d.name,d.office)};
+      const ak=agentKey(cleanAgentName(d.name));if(!agentMeta[ak])agentMeta[ak]={name:cleanAgentName(d.name),office:d.office,regionId:getRegionIdForAgent(d.name,d.office)};
       if(!agentPts[ak])agentPts[ak]=0;if(!agentWeeklyPts[ak])agentWeeklyPts[ak]=new Array(weeks.length).fill(0);
       if(!registry[dk]&&['CLOSED','PEND','NEW'].includes(d.status)){registry[dk]={agentKey:ak,weekIdx:wi,firstStatus:d.status};agentPts[ak]+=1;weekNewPts[ak]=(weekNewPts[ak]||0)+1;}
     });
     Object.values(week.agents||{}).forEach(a=>{
-      if(!a.buyer)return;const ak=agentKey(a.name);if(!agentMeta[ak])agentMeta[ak]={name:a.name,office:a.office,regionId:getRegionIdForAgent(a.name,a.office)};
+      if(!a.buyer)return;const ak=agentKey(cleanAgentName(a.name));if(!agentMeta[ak])agentMeta[ak]={name:cleanAgentName(a.name),office:a.office,regionId:getRegionIdForAgent(a.name,a.office)};
       if(!agentPts[ak])agentPts[ak]=0;if(!agentWeeklyPts[ak])agentWeeklyPts[ak]=new Array(weeks.length).fill(0);if(!agentBuyer[ak])agentBuyer[ak]=0;
       agentBuyer[ak]+=a.buyer;agentPts[ak]+=a.buyer;weekNewPts[ak]=(weekNewPts[ak]||0)+a.buyer;
     });
@@ -979,7 +999,7 @@ function renderDealSection(key,sect,appendTo){
   const fadeEl=document.createElement('div');fadeEl.className='scroll-fade-overlay';fadeEl.style.cssText='position:absolute;right:0;top:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,rgba(255,255,255,0.85));pointer-events:none;z-index:1';tblWrap.appendChild(fadeEl);tblWrap.addEventListener('scroll',function(){if(this.scrollLeft>10)fadeEl.style.display='none';});
   const tbl=document.createElement('table');tbl.className='detail-table';tbl.innerHTML=`<thead><tr><th>Agent</th><th>Address</th><th>Town</th><th>MLS #</th><th>List $</th>${isClosed?'<th>Sold $</th>':''}<th>Side</th></tr></thead>`;
   const tbody=document.createElement('tbody');
-  sect.deals.sort((a,b)=>a.name.localeCompare(b.name)).forEach(d=>{const url=veraniUrl(d);const mlsCell=url?`<a href="${url}" target="_blank" style="color:#185FA5;font-weight:500;text-decoration:none;font-size:11px">${d.mls} ↗</a>`:`<span style="color:#aaa9a2;font-size:11px">${d.mls||'—'}</span>`;const isBothSides=dealIsBoth(d);if(isBothSides){const tr1=document.createElement('tr');tr1.innerHTML=`<td><div class="detail-agent">${d.name}</div></td><td class="detail-address">${d.addr||'—'}</td><td style="font-size:12px">${d.town||'—'}</td><td>${mlsCell}</td><td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}<td><span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#E6F1FB;color:#185FA5">List</span></td>`;tbody.appendChild(tr1);const tr2=document.createElement('tr');tr2.innerHTML=`<td><div class="detail-agent">${d.name}</div></td><td class="detail-address">${d.addr||'—'}</td><td style="font-size:12px">${d.town||'—'}</td><td>${mlsCell}</td><td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}<td><span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#EEEDFE;color:#534AB7">Buy</span></td>`;tbody.appendChild(tr2);}else{const tr=document.createElement('tr');tr.innerHTML=`<td><div class="detail-agent">${d.name}</div></td><td class="detail-address">${d.addr||'—'}</td><td style="font-size:12px">${d.town||'—'}</td><td>${mlsCell}</td><td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}<td>${sidePill(d.notes)}</td>`;tbody.appendChild(tr);}});
+  sect.deals.sort((a,b)=>{const da=new Date(a.date),db=new Date(b.date);const va=isNaN(da)?Infinity:da.getTime();const vb=isNaN(db)?Infinity:db.getTime();return va!==vb?va-vb:a.name.localeCompare(b.name);}).forEach(d=>{const url=veraniUrl(d);const mlsCell=url?`<a href="${url}" target="_blank" style="color:#185FA5;font-weight:500;text-decoration:none;font-size:11px">${d.mls} ↗</a>`:`<span style="color:#aaa9a2;font-size:11px">${d.mls||'—'}</span>`;const isBothSides=dealIsBoth(d);if(isBothSides){const tr1=document.createElement('tr');tr1.innerHTML=`<td><div class="detail-agent">${d.name}</div></td><td class="detail-address">${d.addr||'—'}</td><td style="font-size:12px">${d.town||'—'}</td><td>${mlsCell}</td><td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}<td><span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#E6F1FB;color:#185FA5">List</span></td>`;tbody.appendChild(tr1);const tr2=document.createElement('tr');tr2.innerHTML=`<td><div class="detail-agent">${d.name}</div></td><td class="detail-address">${d.addr||'—'}</td><td style="font-size:12px">${d.town||'—'}</td><td>${mlsCell}</td><td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}<td><span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#EEEDFE;color:#534AB7">Buy</span></td>`;tbody.appendChild(tr2);}else{const tr=document.createElement('tr');tr.innerHTML=`<td><div class="detail-agent">${d.name}</div></td><td class="detail-address">${d.addr||'—'}</td><td style="font-size:12px">${d.town||'—'}</td><td>${mlsCell}</td><td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}<td>${sidePill(d.notes)}</td>`;tbody.appendChild(tr);}});
   tbl.appendChild(tbody);tblWrap.appendChild(tbl);wrap.appendChild(tblWrap);appendTo.appendChild(wrap);
 }
 
