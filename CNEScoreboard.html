@@ -1252,7 +1252,7 @@ function renderWeekNavBar(){
   const selWrap=document.createElement('div');selWrap.style.cssText='position:relative;flex:1;min-width:0';
   const sel=document.createElement('select');sel.style.cssText="width:100%;padding:5px 24px 5px 10px;border:1px solid #CECBF6;border-radius:8px;font-size:12px;font-weight:500;color:#534AB7;background:#fff;cursor:pointer;appearance:none;-webkit-appearance:none;font-family:'DM Sans',sans-serif";
   const curIdx=_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1;
-  ytd.weeks.forEach((w,i)=>{const opt=document.createElement('option');opt.value=i;opt.textContent='Wk '+(i+1)+' · '+w.label;if(i===curIdx)opt.selected=true;sel.appendChild(opt);});
+  for(let i=ytd.weeks.length-1;i>=0;i--){const w=ytd.weeks[i];const opt=document.createElement('option');opt.value=i;opt.textContent='Wk '+(i+1)+' · '+w.label;if(i===curIdx)opt.selected=true;sel.appendChild(opt);}
   const arr=document.createElement('div');arr.style.cssText='position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:#534AB7;font-size:9px';arr.textContent='▼';
   selWrap.appendChild(sel);selWrap.appendChild(arr);bar.appendChild(selWrap);
   const nextBtn=document.createElement('button');nextBtn.innerHTML='→';nextBtn.style.cssText='width:28px;height:28px;border-radius:50%;border:1px solid #CECBF6;background:#fff;font-size:13px;color:#534AB7;cursor:pointer;flex-shrink:0;transition:background .15s';
