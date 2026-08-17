@@ -309,6 +309,7 @@
     </div>
     <div class="publish-actions" id="publish-actions"></div>
   </div>
+  <div id="pending-weeks-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:1.25rem"></div>
 
   <!-- ── PREVIEW BANNER ── -->
   <div class="preview-banner" id="preview-banner">
@@ -540,37 +541,67 @@ function updatePublishStatusBar(){
   const weeks=_ytdData.weeks||[];
   if(!weeks.length){
     bar.className='publish-status none';dot.className='publish-dot none';
-    label.textContent='No data loaded';sub.textContent='Paste data below to get started';return;
+    label.textContent='No data loaded';sub.textContent='Paste data below to get started';
+    renderPendingWeeksList();return;
   }
-  const lastWeek=weeks[weeks.length-1];
-  if(isPublished(lastWeek)){
+  // Status bar always reflects the most recently PUBLISHED week -- what's actually live right now --
+  // regardless of whether older or newer weeks are still sitting pending. Every pending week (there
+  // can be more than one at once, e.g. after reprocessing an older week out of order) gets its own
+  // row with its own Preview/Publish Now controls in the list below, instead of this bar only ever
+  // being able to represent a single week.
+  const publishedWeeks=weeks.filter(isPublished);
+  if(publishedWeeks.length){
+    const lastPublished=publishedWeeks[publishedWeeks.length-1];
     bar.className='publish-status live';dot.className='publish-dot live';
-    label.textContent=`✓ Live: "${lastWeek.label}"`;
+    label.textContent=`✓ Live: "${lastPublished.label}"`;
     sub.textContent=`Published — visible to all agents`;
   }else{
     bar.className='publish-status pending';dot.className='publish-dot pending';
-    label.textContent=`⏳ Pending: "${lastWeek.label}"`;
-    const pub=new Date(lastWeek.publishAt);
-    sub.textContent=`Publishes ${pub.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})} at 5:00 PM ET`;
-    const prevBtn=document.createElement('button');prevBtn.className='btn btn-preview';prevBtn.style.padding='6px 14px';prevBtn.style.fontSize='12px';
-    prevBtn.textContent='👁 Preview';prevBtn.onclick=previewPending;actions.appendChild(prevBtn);
-    const pubBtn=document.createElement('button');pubBtn.className='btn btn-primary';pubBtn.style.padding='6px 14px';pubBtn.style.fontSize='12px';
-    pubBtn.textContent='🚀 Publish Now';pubBtn.onclick=publishNow;actions.appendChild(pubBtn);
+    label.textContent='No published data yet';
+    sub.textContent='All loaded weeks are still pending — see below';
   }
+  renderPendingWeeksList();
+}
+
+// renderPendingWeeksList: shows EVERY pending week (not just the most recent one), each with its
+// own Preview and Publish Now controls scoped to that specific week by label.
+function renderPendingWeeksList(){
+  const container=document.getElementById('pending-weeks-list');
+  if(!container)return;
+  container.innerHTML='';
+  const weeks=_ytdData.weeks||[];
+  const pending=weeks.filter(w=>!isPublished(w));
+  if(!pending.length)return;
+  pending.forEach(w=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#FFF9EE;border:1px solid #F0DFB8;border-radius:8px;padding:8px 12px';
+    const pub=new Date(w.publishAt);
+    const info=document.createElement('div');
+    info.innerHTML=`<div style="font-size:12px;font-weight:500;color:#5F5E5A">⏳ Pending: "${w.label}"</div><div style="font-size:11px;opacity:0.75">Publishes ${pub.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})} at 5:00 PM ET</div>`;
+    row.appendChild(info);
+    const btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;flex-wrap:wrap';
+    const prevBtn=document.createElement('button');prevBtn.className='btn btn-preview';prevBtn.style.padding='6px 14px';prevBtn.style.fontSize='12px';
+    prevBtn.textContent='👁 Preview';prevBtn.onclick=function(){previewPending(w.label);};btns.appendChild(prevBtn);
+    const pubBtn=document.createElement('button');pubBtn.className='btn btn-primary';pubBtn.style.padding='6px 14px';pubBtn.style.fontSize='12px';
+    pubBtn.textContent='🚀 Publish Now';pubBtn.onclick=function(){publishNow(w.label);};btns.appendChild(pubBtn);
+    row.appendChild(btns);
+    container.appendChild(row);
+  });
 }
 
 // publishNow: overrides the scheduled Monday-5pm publishAt for the most recent (pending) week,
 // making it live on the public Scoreboard immediately. Every other week is untouched -- the
 // default Monday 5pm auto-publish behavior still applies to any week you don't explicitly push.
-function publishNow(){
+function publishNow(weekLabel){
   const weeks=_ytdData.weeks||[];
   if(!weeks.length)return;
-  const lastWeek=weeks[weeks.length-1];
-  if(isPublished(lastWeek)){setMsg('This week is already live.','#BA7517');return;}
-  if(!confirm('Publish "'+lastWeek.label+'" live right now, ahead of the scheduled Monday 5:00 PM ET time?'))return;
-  lastWeek.publishAt=new Date().toISOString();
+  const target=weekLabel?weeks.find(function(w){return w.label===weekLabel;}):weeks.filter(function(w){return !isPublished(w);}).pop();
+  if(!target){setMsg('No matching pending week found.','#BA7517');return;}
+  if(isPublished(target)){setMsg('"'+target.label+'" is already live.','#BA7517');return;}
+  if(!confirm('Publish "'+target.label+'" live right now, ahead of the scheduled Monday 5:00 PM ET time?'))return;
+  target.publishAt=new Date().toISOString();
   writeToDrive({weeks:weeks}).then(function(){
-    setMsg('✓ "'+lastWeek.label+'" is now live on the public Scoreboard.','#1D9E75');
+    setMsg('✓ "'+target.label+'" is now live on the public Scoreboard.','#1D9E75');
     updatePublishStatusBar();
     if(typeof renderWeeksLoaded==='function')renderWeeksLoaded();
   });
@@ -579,26 +610,27 @@ function publishNow(){
 // ═══════════════════════════════════════════════════════════════════════════════
 // PREVIEW MODE
 // ═══════════════════════════════════════════════════════════════════════════════
-function previewPending(){
+function previewPending(weekLabel){
   const weeks=_ytdData.weeks||[];
   const pending=weeks.filter(w=>!isPublished(w));
   if(!pending.length){setMsg('No pending week to preview — all weeks are already published.','#BA7517');return;}
+  const target=weekLabel?weeks.find(w=>w.label===weekLabel):pending[pending.length-1];
+  if(!target){setMsg('No matching pending week found.','#BA7517');return;}
   _isPreviewing=true;
   _previewData={weeks:[...weeks]};
   document.getElementById('preview-banner').classList.add('active');
-  const lastWeek=weeks[weeks.length-1];
-  const lastIdx=weeks.length-1;
-  _currentWeekIdx=lastIdx;
-  window._currentBuyerRows=lastWeek.buyerRows||[];
-  window._currentWeekDeals=lastWeek.weekDeals||{};
-  window._currentAgents=lastWeek.agents||{};
-  document.getElementById('current-week-label').textContent='PREVIEW: Week of '+lastWeek.label;
-  updateStatsBar(lastWeek.agents||{},lastWeek.deals||[]);
+  const targetIdx=weeks.indexOf(target);
+  _currentWeekIdx=targetIdx;
+  window._currentBuyerRows=target.buyerRows||[];
+  window._currentWeekDeals=target.weekDeals||{};
+  window._currentAgents=target.agents||{};
+  document.getElementById('current-week-label').textContent='PREVIEW: Week of '+target.label;
+  updateStatsBar(target.agents||{},target.deals||[]);
   renderWeekNavBar();
   var sel=document.getElementById('week-nav-select');
-  if(sel) sel.value=lastIdx;
-  renderSummary(lastWeek.agents||{},lastWeek.deals||[],'summary-content');
-  REGIONS.forEach(r=>renderAgentList(r.id+'-content',lastWeek.agents||{},lastWeek.deals||[],r.id,r.color));
+  if(sel) sel.value=targetIdx;
+  renderSummary(target.agents||{},target.deals||[],'summary-content');
+  REGIONS.forEach(r=>renderAgentList(r.id+'-content',target.agents||{},target.deals||[],r.id,r.color));
   renderYTD();
 }
 
@@ -830,7 +862,7 @@ function parseTransactions(tsv,weekLabel){
     }
     const rank=STATUS_RANK[status]||0;
     if(!weekDeals[dk]||rank>(STATUS_RANK[weekDeals[dk].status]||0)){
-      weekDeals[dk]={status,name,office,mls:mls.trim(),addr:r['address']||'',town:r['town']||'',notes:notes,listP:parseMoney(r['list price']),soldP:parseMoney(r['sold price']),date:r['timestamp']||r['notes']||'',regionId:getRegionIdForAgent(name,office),dk};
+      weekDeals[dk]={status,name,office,mls:mls.trim(),addr:r['address']||'',town:r['town']||'',notes:notes,listP:parseMoney(r['list price']),soldP:parseMoney(r['sold price']),date:r['timestamp']||r['notes']||'',regionId:getRegionIdForAgent(name,office),dk,raw:{...r}};
     }
   });
   pruneSupersededDeals(weekDeals);
@@ -862,7 +894,7 @@ function parseBuyers(tsv,agentMap){
     if(t.includes('agency')){agentMap[key].buyerAgency+=1;typeLabel='agency';}
     else if(t.includes('showing')){agentMap[key].showing+=1;typeLabel='showing';}
     else if(t.includes('facilitator')||t.includes('transactional')){agentMap[key].facilitator+=1;typeLabel='facilitator';}
-    buyerRows.push({name,office,regionId:getRegionIdForAgent(name,office),typeLabel,date:r['timestamp']||r['notes']||''});
+    buyerRows.push({name,office,regionId:getRegionIdForAgent(name,office),typeLabel,date:r['timestamp']||r['notes']||'',raw:{...r}});
   });
   return{agentMap,buyerRows};
 }
