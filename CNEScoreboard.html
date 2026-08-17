@@ -676,7 +676,7 @@ function renderBuyerTable(buyerRows,appendTo){
     else if(br.typeLabel==='showing'){brByAgent[ak].showing++;brByAgent[ak].showingDates.push(br.date);}
     else if(br.typeLabel==='facilitator'){brByAgent[ak].facilitator++;brByAgent[ak].facilitatorDates.push(br.date);}
   });
-  buyerRows.sort((a,b)=>a.name.localeCompare(b.name)).forEach(r=>{
+  buyerRows.sort((a,b)=>{const abr=brByAgent[agentKey(a.name)]||{};const bbr=brByAgent[agentKey(b.name)]||{};const aD=[...(abr.agencyDates||[]),...(abr.showingDates||[]),...(abr.facilitatorDates||[])].map(x=>new Date(x)).filter(x=>!isNaN(x));const bD=[...(bbr.agencyDates||[]),...(bbr.showingDates||[]),...(bbr.facilitatorDates||[])].map(x=>new Date(x)).filter(x=>!isNaN(x));const aMin=aD.length?Math.min(...aD):Infinity;const bMin=bD.length?Math.min(...bD):Infinity;return aMin!==bMin?aMin-bMin:a.name.localeCompare(b.name);}).forEach(r=>{
     const ak=agentKey(r.name);const br=brByAgent[ak]||{};
     const types=[];
     if(br.agency>0)types.push({label:'Buyer Agency',count:br.agency,dates:br.agencyDates});
