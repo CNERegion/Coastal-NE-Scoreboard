@@ -194,10 +194,6 @@
     .tabs { gap:4px; flex-wrap:wrap; justify-content:center; }
     .tab { padding:6px 10px; font-size:11px; border-radius:20px; }
 
-    /* Week nav */
-    #week-nav-bar { padding:0; }
-    #week-nav-bar > div { padding:6px 10px; gap:6px; }
-
     /* Summary grid - stack vertically */
     .summary-grid { grid-template-columns:1fr; gap:10px; }
     .summary-card { padding:14px; }
@@ -274,8 +270,6 @@
     .detail-table th:nth-child(5), .detail-table td:nth-child(5) { min-width:90px; }
     .detail-table th:nth-child(6), .detail-table td:nth-child(6) { min-width:70px; }
     .ytd-agent-card { padding:10px 12px; }
-    #week-nav-bar > div { padding:6px 8px; gap:5px; }
-    #week-nav-bar select { font-size:11px; }
   }
 </style>
 </head>
@@ -366,8 +360,6 @@
     <button class="tab" style="background:#0F6E56;color:#fff;border-color:transparent" onclick="showTab('maine',this,'#0F6E56')">Maine</button>
     <button class="tab" style="background:#ff00ff;color:#fff;border-color:transparent;font-weight:700" onclick="showTab('ytd',this,'#ff00ff')">YTD</button>
   </div>
-
-  <div id="week-nav-bar" style="display:none;margin-bottom:1.25rem;"></div>
 
   <div class="section active" id="tab-summary"><div id="summary-content"></div></div>
   <div class="section" id="tab-seacoast"><div id="seacoast-content"></div></div>
@@ -626,9 +618,6 @@ function previewPending(weekLabel){
   window._currentAgents=target.agents||{};
   document.getElementById('current-week-label').textContent='PREVIEW: Week of '+target.label;
   updateStatsBar(target.agents||{},target.deals||[]);
-  renderWeekNavBar();
-  var sel=document.getElementById('week-nav-select');
-  if(sel) sel.value=targetIdx;
   renderSummary(target.agents||{},target.deals||[],'summary-content');
   REGIONS.forEach(r=>renderAgentList(r.id+'-content',target.agents||{},target.deals||[],r.id,r.color));
   renderYTD();
@@ -672,6 +661,7 @@ function initials(name){const p=(name||'').trim().split(/\s+/);return p.length==
 function parseMoney(str){if(!str)return 0;const n=parseFloat((str+'').replace(/\/month/gi,'').replace(/[$,\s]/g,''));return isNaN(n)?0:n;}
 function normalizeTown(t){return(t||'').replace(/,?\s*(Maine|New Hampshire|Massachusetts|ME|NH|MA)\.?\s*$/i,'').trim();}
 function isValidMlsEntry(v){const t=(v||'').trim().toUpperCase();if(!t||t==='NON-MLS')return true;return/^[A-Za-z0-9]{4,12}$/.test(t);}
+function demoneyfy(raw){const t=(raw==null?'':(''+raw)).trim();const m=t.match(/^\$?\s*([\d,]+)(?:\.\d{1,2})?$/);if(m){const digits=m[1].replace(/,/g,'');if(/^\d+$/.test(digits)&&digits.length>0)return digits;}return t;}
 function fmtMoney(n){if(n>=1000000)return'$'+(n/1000000).toFixed(2)+'M';if(n>=1000)return'$'+Math.round(n/1000)+'K';return'$'+Math.round(n).toLocaleString();}
 function fmtDealDate(dateStr){const d=new Date(dateStr);if(isNaN(d))return'—';return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 function fmtDateOrRange(dates){const valid=(dates||[]).map(d=>new Date(d)).filter(d=>!isNaN(d));if(!valid.length)return'—';const f=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});valid.sort((a,b)=>a-b);const seen=new Set();const unique=[];valid.forEach(d=>{const lbl=f(d);if(!seen.has(lbl)){seen.add(lbl);unique.push(lbl);}});return unique.join(' / ');}
@@ -843,7 +833,7 @@ function parseTransactions(tsv,weekLabel){
     const status=(r['status']||'').toUpperCase().trim();const name=cleanAgentName(r['agent name']);
     if(!name||!status)return;
     if(isExcluded(name))return;
-    const mlsRaw=r['mls#']||r['mls']||'';
+    const mlsRaw=demoneyfy(r['mls#']||r['mls']||'');
     const mls=isValidMlsEntry(mlsRaw)?mlsRaw:'';
     const notes=((r['notes']||'')+' '+(r['timestamp']||'')).toLowerCase();
     const isBothSides=notes.includes('both sides');
@@ -1037,7 +1027,7 @@ function renderDealSection(key,sect,appendTo){
   const fadeEl=document.createElement('div');fadeEl.className='scroll-fade-overlay';fadeEl.style.cssText='position:absolute;right:0;top:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,rgba(255,255,255,0.85));pointer-events:none;z-index:1';tblWrap.appendChild(fadeEl);tblWrap.addEventListener('scroll',function(){if(this.scrollLeft>10)fadeEl.style.display='none';});
   const tbl=document.createElement('table');tbl.className='detail-table';tbl.innerHTML=`<thead><tr><th>Agent</th><th>Address</th><th>Town</th><th>MLS #</th><th>List $</th>${isClosed?'<th>Sold $</th>':''}<th>Side</th><th>Date</th></tr></thead>`;
   const tbody=document.createElement('tbody');
-  sect.deals.sort((a,b)=>{const da=new Date(a.date),db=new Date(b.date);const va=isNaN(da)?Infinity:da.getTime();const vb=isNaN(db)?Infinity:db.getTime();return va!==vb?va-vb:a.name.localeCompare(b.name);}).forEach(d=>{const url=veraniUrl(d);const mlsCell=url?`<a href="${url}" target="_blank" style="color:#185FA5;font-weight:500;text-decoration:none;font-size:11px">${d.mls} ↗</a>`:`<span style="color:#aaa9a2;font-size:11px">${d.mls||'—'}</span>`;const isBothSides=dealIsBoth(d);if(isBothSides){const tr1=document.createElement('tr');tr1.innerHTML=`<td><div class="detail-agent">${d.name}</div></td><td class="detail-address">${d.addr||'—'}</td><td style="font-size:12px">${d.town||'—'}</td><td>${mlsCell}</td><td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}<td><span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#E6F1FB;color:#185FA5">List</span></td><td style="font-size:12px;color:#5F5E5A;white-space:nowrap">${fmtDealDate(d.date)}</td>`;tbody.appendChild(tr1);const tr2=document.createElement('tr');tr2.innerHTML=`<td><div class="detail-agent">${d.name}</div></td><td class="detail-address">${d.addr||'—'}</td><td style="font-size:12px">${d.town||'—'}</td><td>${mlsCell}</td><td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}<td><span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#EEEDFE;color:#534AB7">Buy</span></td><td style="font-size:12px;color:#5F5E5A;white-space:nowrap">${fmtDealDate(d.date)}</td>`;tbody.appendChild(tr2);}else{const tr=document.createElement('tr');tr.innerHTML=`<td><div class="detail-agent">${d.name}</div></td><td class="detail-address">${d.addr||'—'}</td><td style="font-size:12px">${d.town||'—'}</td><td>${mlsCell}</td><td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}<td>${sidePill(d.notes)}</td><td style="font-size:12px;color:#5F5E5A;white-space:nowrap">${fmtDealDate(d.date)}</td>`;tbody.appendChild(tr);}});
+  sect.deals.sort((a,b)=>{const da=new Date(a.date),db=new Date(b.date);const va=isNaN(da)?Infinity:da.getTime();const vb=isNaN(db)?Infinity:db.getTime();return va!==vb?va-vb:a.name.localeCompare(b.name);}).forEach(d=>{d.town=normalizeTown(d.town);d.mls=demoneyfy(d.mls);const url=veraniUrl(d);const mlsCell=url?`<a href="${url}" target="_blank" style="color:#185FA5;font-weight:500;text-decoration:none;font-size:11px">${d.mls} ↗</a>`:`<span style="color:#aaa9a2;font-size:11px">${d.mls||'—'}</span>`;const isBothSides=dealIsBoth(d);if(isBothSides){const tr1=document.createElement('tr');tr1.innerHTML=`<td><div class="detail-agent">${d.name}</div></td><td class="detail-address">${d.addr||'—'}</td><td style="font-size:12px">${d.town||'—'}</td><td>${mlsCell}</td><td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}<td><span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#E6F1FB;color:#185FA5">List</span></td><td style="font-size:12px;color:#5F5E5A;white-space:nowrap">${fmtDealDate(d.date)}</td>`;tbody.appendChild(tr1);const tr2=document.createElement('tr');tr2.innerHTML=`<td><div class="detail-agent">${d.name}</div></td><td class="detail-address">${d.addr||'—'}</td><td style="font-size:12px">${d.town||'—'}</td><td>${mlsCell}</td><td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}<td><span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#EEEDFE;color:#534AB7">Buy</span></td><td style="font-size:12px;color:#5F5E5A;white-space:nowrap">${fmtDealDate(d.date)}</td>`;tbody.appendChild(tr2);}else{const tr=document.createElement('tr');tr.innerHTML=`<td><div class="detail-agent">${d.name}</div></td><td class="detail-address">${d.addr||'—'}</td><td style="font-size:12px">${d.town||'—'}</td><td>${mlsCell}</td><td style="font-size:12px">${d.listP>0?fmtMoney(d.listP):'—'}</td>${isClosed?`<td style="font-size:12px;font-weight:500;color:#1D9E75">${d.soldP>0?fmtMoney(d.soldP):'—'}</td>`:''}<td>${sidePill(d.notes)}</td><td style="font-size:12px;color:#5F5E5A;white-space:nowrap">${fmtDealDate(d.date)}</td>`;tbody.appendChild(tr);}});
   tbl.appendChild(tbody);tblWrap.appendChild(tbl);wrap.appendChild(tblWrap);appendTo.appendChild(wrap);
 }
 
@@ -1086,6 +1076,7 @@ function renderAgentListContent(el,agentMap,deals,regionId,regionColor,r,weekDea
   const rbrs=(window._currentBuyerRows||[]).filter(br=>br.regionId===regionId);
   if(rbrs.length){stats.buyerAgency=rbrs.filter(br=>br.typeLabel==='agency').length;stats.showing=rbrs.filter(br=>br.typeLabel==='showing').length;stats.facilitator=rbrs.filter(br=>br.typeLabel==='facilitator').length;}
   const money=calcRegionMoney(deals,regionId);el.appendChild(renderRegionHeader(r,stats,money));
+  const wnbRegion=buildWeekNavBarElement();if(wnbRegion)el.appendChild(wnbRegion);
   const activityWrap=document.createElement('div');activityWrap.style.cssText=`margin-bottom:8px;border-radius:10px;border:1px solid #e2e0d8;overflow:hidden`;
   const actHdrTop=document.createElement('div');actHdrTop.style.cssText=`display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#fff;border-bottom:1px solid #e2e0d8;cursor:pointer;user-select:none`;
   actHdrTop.innerHTML=`<span style="font-size:12px;font-weight:500;color:#1a1a18">📋 Weekly Activity</span><span id="act-toggle-${regionId}" style="font-size:11px;color:#888780">▼ Show</span>`;
@@ -1160,6 +1151,7 @@ function renderSummary(agentMap,deals,containerId){
   const standings=document.createElement('div');standings.className='standings';standings.innerHTML='<div class="standings-title">Regional Standing</div>';
   [...allStats].sort((a,b)=>b.stats.pts-a.stats.pts).forEach((r,i)=>{const pct=Math.round((r.stats.pts/maxPts)*100);const row=document.createElement('div');row.className='standing-row';row.innerHTML=`<div class="standing-rank">${i+1}</div><div class="standing-name" style="color:${r.color}">${r.name}</div><div class="standing-bar-wrap"><div class="standing-bar" style="width:${pct}%;background:${r.barColor}"></div></div><div class="standing-pts" style="color:${r.color}">${r.stats.pts} pts</div><div class="standing-money">${r.money.soldTotal>0?fmtMoney(r.money.soldTotal):'—'}</div>`;standings.appendChild(row);});
   el.appendChild(standings);
+  const wnbSummary=buildWeekNavBarElement();if(wnbSummary)el.appendChild(wnbSummary);
   // ── WEEKLY ACTIVITY with region filter pills (replaces Weekly Detail) ────
   const actWrapS=document.createElement('div');
   actWrapS.style.cssText='margin-bottom:8px;border-radius:10px;border:1px solid #e2e0d8;overflow:hidden';
@@ -1374,17 +1366,38 @@ function updateStatsBar(agentMap,deals){
 
 function renderYTDStandingsForWeek(weekIdx){const ytdEl=document.getElementById('ytd-sum-inner');if(!ytdEl)return;const ytd=loadYTD();if(!ytd.weeks.length)return;const weeksToUse=ytd.weeks.slice(0,weekIdx+1);const allDeals=weeksToUse.flatMap(w=>w.deals||[]);const ytdRegAgents={};weeksToUse.forEach(week=>{Object.entries(week.agents||{}).forEach(([key,a])=>{if(!ytdRegAgents[key])ytdRegAgents[key]={...a,buyer:0};ytdRegAgents[key].closed=Math.max(ytdRegAgents[key].closed||0,a.closed||0);ytdRegAgents[key].pend=Math.max(ytdRegAgents[key].pend||0,a.pend||0);ytdRegAgents[key].newL=Math.max(ytdRegAgents[key].newL||0,a.newL||0);ytdRegAgents[key].buyer=(ytdRegAgents[key].buyer||0)+(a.buyer||0);});});renderSummary(ytdRegAgents,allDeals,'ytd-sum-inner');}
 
-function renderWeekNavBar(){
-  const el=document.getElementById('week-nav-bar');if(!el)return;const ytd=loadYTD();if(!ytd.weeks.length){el.style.display='none';return;}
-  el.style.display='block';el.innerHTML='';const isLatest=_currentWeekIdx<0||_currentWeekIdx===ytd.weeks.length-1;const bar=document.createElement('div');bar.style.cssText='display:flex;align-items:center;gap:8px;background:#EEEDFE;border:1px solid #CECBF6;border-radius:12px;padding:8px 14px;';
-  const dot=document.createElement('div');dot.style.cssText='width:8px;height:8px;border-radius:50%;background:#534AB7;flex-shrink:0';bar.appendChild(dot);const lbl=document.createElement('span');lbl.style.cssText='font-size:12px;font-weight:500;color:#534AB7;white-space:nowrap;flex-shrink:0';lbl.textContent='Viewing week';bar.appendChild(lbl);
-  const prevBtn=document.createElement('button');prevBtn.innerHTML='←';prevBtn.style.cssText='width:28px;height:28px;border-radius:50%;border:1px solid #CECBF6;background:#fff;font-size:13px;color:#534AB7;cursor:pointer;flex-shrink:0';prevBtn.disabled=(_currentWeekIdx<=0);prevBtn.style.opacity=prevBtn.disabled?'0.3':'1';bar.appendChild(prevBtn);
-  const selWrap=document.createElement('div');selWrap.style.cssText='position:relative;flex:1;min-width:0';const sel=document.createElement('select');sel.id='week-nav-select';sel.style.cssText="width:100%;padding:5px 24px 5px 10px;border:1px solid #CECBF6;border-radius:8px;font-size:12px;font-weight:500;color:#534AB7;background:#fff;cursor:pointer;appearance:none;-webkit-appearance:none;font-family:'DM Sans',sans-serif";const curIdx=_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1;for(let i=ytd.weeks.length-1;i>=0;i--){const w=ytd.weeks[i];const opt=document.createElement('option');opt.value=i;opt.textContent='Wk '+(i+1)+' · '+w.label;if(i===curIdx)opt.selected=true;sel.appendChild(opt);}const arr=document.createElement('div');arr.style.cssText='position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:#534AB7;font-size:9px';arr.textContent='▼';selWrap.appendChild(sel);selWrap.appendChild(arr);bar.appendChild(selWrap);
-  const nextBtn=document.createElement('button');nextBtn.innerHTML='→';nextBtn.style.cssText='width:28px;height:28px;border-radius:50%;border:1px solid #CECBF6;background:#fff;font-size:13px;color:#534AB7;cursor:pointer;flex-shrink:0';nextBtn.disabled=isLatest;nextBtn.style.opacity=nextBtn.disabled?'0.3':'1';bar.appendChild(nextBtn);
-  if(!isLatest){const curBtn=document.createElement('button');curBtn.textContent='→ Current week';curBtn.style.cssText="font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;border:1px solid #534AB7;background:#534AB7;color:#fff;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:'DM Sans',sans-serif";curBtn.addEventListener('click',()=>goToWeek(ytd.weeks.length-1));bar.appendChild(curBtn);}
-  el.appendChild(bar);
-  function goToWeek(idx){const y=loadYTD();if(idx<0||idx>=y.weeks.length)return;_currentWeekIdx=idx;const w=y.weeks[idx];updateStatsBar(w.agents||{},w.deals||[]);renderSummary(w.agents||{},w.deals||[],'summary-content');renderYTDStandingsForWeek(idx);REGIONS.forEach(r=>renderAgentList(r.id+'-content',w.agents||{},w.deals||[],r.id,r.color));window._currentWeekDeals=w.weekDeals||{};window._currentAgents=w.agents||{};window._currentBuyerRows=w.buyerRows||[];document.getElementById('current-week-label').textContent='Week of '+w.label;renderWeekNavBar();}
-  prevBtn.addEventListener('click',()=>goToWeek((_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1)-1));nextBtn.addEventListener('click',()=>goToWeek((_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1)+1));sel.addEventListener('change',function(){goToWeek(parseInt(this.value));});
+function buildWeekNavBarElement(){
+  const ytd=loadYTD();
+  if(!ytd.weeks.length)return null;
+  const isLatest=_currentWeekIdx<0||_currentWeekIdx===ytd.weeks.length-1;
+  const bar=document.createElement('div');bar.style.cssText='display:flex;align-items:center;gap:8px;background:#EEEDFE;border:1px solid #CECBF6;border-radius:12px;padding:8px 14px;margin-bottom:12px;';
+  const dot=document.createElement('div');dot.style.cssText='width:8px;height:8px;border-radius:50%;background:#534AB7;flex-shrink:0';bar.appendChild(dot);
+  const lbl=document.createElement('span');lbl.style.cssText='font-size:12px;font-weight:500;color:#534AB7;white-space:nowrap;flex-shrink:0';lbl.textContent='Viewing week';bar.appendChild(lbl);
+  const prevBtn=document.createElement('button');prevBtn.innerHTML='←';prevBtn.style.cssText='width:28px;height:28px;border-radius:50%;border:1px solid #CECBF6;background:#fff;font-size:13px;color:#534AB7;cursor:pointer;flex-shrink:0;transition:background .15s';
+  prevBtn.disabled=(_currentWeekIdx<=0);prevBtn.style.opacity=prevBtn.disabled?'0.3':'1';bar.appendChild(prevBtn);
+  const selWrap=document.createElement('div');selWrap.style.cssText='position:relative;flex:1;min-width:0';
+  const sel=document.createElement('select');sel.style.cssText="width:100%;padding:5px 24px 5px 10px;border:1px solid #CECBF6;border-radius:8px;font-size:12px;font-weight:500;color:#534AB7;background:#fff;cursor:pointer;appearance:none;-webkit-appearance:none;font-family:'DM Sans',sans-serif";
+  const curIdx=_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1;
+  for(let i=ytd.weeks.length-1;i>=0;i--){const w=ytd.weeks[i];const opt=document.createElement('option');opt.value=i;opt.textContent='Wk '+(i+1)+' · '+w.label;if(i===curIdx)opt.selected=true;sel.appendChild(opt);}
+  const arr=document.createElement('div');arr.style.cssText='position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:#534AB7;font-size:9px';arr.textContent='▼';
+  selWrap.appendChild(sel);selWrap.appendChild(arr);bar.appendChild(selWrap);
+  const nextBtn=document.createElement('button');nextBtn.innerHTML='→';nextBtn.style.cssText='width:28px;height:28px;border-radius:50%;border:1px solid #CECBF6;background:#fff;font-size:13px;color:#534AB7;cursor:pointer;flex-shrink:0;transition:background .15s';
+  nextBtn.disabled=isLatest;nextBtn.style.opacity=nextBtn.disabled?'0.3':'1';bar.appendChild(nextBtn);
+  if(!isLatest){const curBtn=document.createElement('button');curBtn.textContent='→ Current week';curBtn.style.cssText="font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;border:1px solid #534AB7;background:#534AB7;color:#fff;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:'DM Sans',sans-serif;transition:all .15s";curBtn.addEventListener('click',()=>goToWeek(ytd.weeks.length-1));bar.appendChild(curBtn);}
+  prevBtn.addEventListener('click',()=>goToWeek((_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1)-1));
+  nextBtn.addEventListener('click',()=>goToWeek((_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1)+1));
+  sel.addEventListener('change',function(){goToWeek(parseInt(this.value));});
+  return bar;
+}
+function goToWeek(idx){
+  const y=loadYTD();if(idx<0||idx>=y.weeks.length)return;
+  _currentWeekIdx=idx;const w=y.weeks[idx];
+  window._currentWeekDeals=w.weekDeals||{};window._currentAgents=w.agents||{};window._currentBuyerRows=w.buyerRows||[];
+  updateStatsBar(w.agents||{},w.deals||[]);
+  renderSummary(w.agents||{},w.deals||[],'summary-content');
+  renderYTDStandingsForWeek(idx);
+  REGIONS.forEach(r=>renderAgentList(r.id+'-content',w.agents||{},w.deals||[],r.id,r.color));
+  document.getElementById('current-week-label').textContent='Week of '+w.label;
 }
 
 function renderAll(agentMap,deals,weekDeals){
@@ -1393,7 +1406,6 @@ function renderAll(agentMap,deals,weekDeals){
   // In admin, keep week nav in sync with _currentWeekIdx
   var ytd=loadYTD();
   if(_currentWeekIdx<0&&ytd.weeks.length) _currentWeekIdx=ytd.weeks.length-1;
-  renderWeekNavBar();
   const existingBanner=document.querySelector('.detail-banner');if(existingBanner)existingBanner.remove();
   renderSummary(agentMap,deals,'summary-content');if(existingBanner){const summaryEl=document.getElementById('summary-content');const newBanner=summaryEl.querySelector('.detail-banner');if(newBanner)newBanner.replaceWith(existingBanner);else summaryEl.appendChild(existingBanner);}
   REGIONS.forEach(r=>renderAgentList(r.id+'-content',agentMap,deals,r.id,r.color));renderYTD();
@@ -1460,10 +1472,6 @@ function showTab(id,el,color,afterRender){
     var isPending=!isPublished(last);
     document.getElementById('current-week-label').textContent=(isPending?'PREVIEW: ':'')+'Week of '+last.label;
     updateStatsBar(last.agents||{},last.deals||[]);
-    renderWeekNavBar();
-    // Force the dropdown to show the correct week
-    var sel=document.getElementById('week-nav-select');
-    if(sel) sel.value=lastIdx;
     renderSummary(last.agents||{},last.deals||[],'summary-content');
     REGIONS.forEach(function(r){renderAgentList(r.id+'-content',last.agents||{},last.deals||[],r.id,r.color);});
     renderYTD();

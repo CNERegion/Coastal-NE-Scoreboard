@@ -646,6 +646,7 @@ function sidePill(notes){
 function toSlug(str){return(str||'').toLowerCase().replace(/[#\/]/g,'').replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-');}
 function normalizeTown(t){return(t||'').replace(/,?\s*(Maine|New Hampshire|Massachusetts|ME|NH|MA)\.?\s*$/i,'').trim();}
 function isValidMls(m){return/^[A-Za-z0-9]{4,12}$/.test(m||'');}
+function demoneyfy(raw){const t=(raw==null?'':(''+raw)).trim();const m=t.match(/^\$?\s*([\d,]+)(?:\.\d{1,2})?$/);if(m){const digits=m[1].replace(/,/g,'');if(/^\d+$/.test(digits)&&digits.length>0)return digits;}return t;}
 function statePrefix(office){const o=(office||'').toLowerCase().trim();if(['saco','biddeford','kennebunk'].includes(o))return'me';if(['andover','bradford','haverhill','methuen','newburyport'].includes(o))return'ma';return'nh';}
 function veraniUrl(d){const mls=(d.mls||'').trim().toUpperCase();if(!mls||mls==='NON-MLS'||!isValidMls(mls))return null;return`https://www.verani.com/${statePrefix(d.office)}-real-estate/${toSlug(normalizeTown(d.town))}/${toSlug(d.addr)}-mls-${mls.toLowerCase()}`;}
 
@@ -713,6 +714,7 @@ function renderDealSection(key,sect,appendTo){
   const tbody=document.createElement('tbody');
   sect.deals.sort((a,b)=>{const da=new Date(a.date),db=new Date(b.date);const va=isNaN(da)?Infinity:da.getTime();const vb=isNaN(db)?Infinity:db.getTime();return va!==vb?va-vb:a.name.localeCompare(b.name);}).forEach(d=>{
     d.town=normalizeTown(d.town);
+    d.mls=demoneyfy(d.mls);
     const url=veraniUrl(d);
     const mlsCell=url?`<a href="${url}" target="_blank" style="color:#185FA5;font-weight:500;text-decoration:none;font-size:11px">${d.mls} ↗</a>`:`<span style="color:#aaa9a2;font-size:11px">${d.mls||'—'}</span>`;
     const isBothSides=dealIsBoth(d);
