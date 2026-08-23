@@ -142,10 +142,6 @@
     .tabs { gap:4px; flex-wrap:wrap; justify-content:center; }
     .tab { padding:6px 10px; font-size:11px; border-radius:20px; }
 
-    /* Week nav */
-    #week-nav-bar { padding:0; }
-    #week-nav-bar > div { padding:6px 10px; gap:6px; }
-
     /* Summary grid - stack vertically */
     .summary-grid { grid-template-columns:1fr; gap:10px; }
     .summary-card { padding:14px; }
@@ -222,8 +218,6 @@
     .detail-table th:nth-child(5), .detail-table td:nth-child(5) { min-width:90px; }
     .detail-table th:nth-child(6), .detail-table td:nth-child(6) { min-width:70px; }
     .ytd-agent-card { padding:10px 12px; }
-    #week-nav-bar > div { padding:6px 8px; gap:5px; }
-    #week-nav-bar select { font-size:11px; }
   }
 </style>
 </head>
@@ -263,8 +257,6 @@
     <button class="tab" style="background:#0F6E56;color:#fff;border-color:transparent" onclick="showTab('maine',this,'#0F6E56')">Maine</button>
     <button class="tab" style="background:#ff00ff;color:#fff;border-color:transparent;font-weight:700" onclick="showTab('ytd',this,'#ff00ff')">YTD</button>
   </div>
-
-  <div id="week-nav-bar" style="display:none;margin-bottom:1.25rem;"></div>
 
   <div class="section active" id="tab-summary"><div id="summary-content"></div></div>
   <div class="section" id="tab-seacoast"><div id="seacoast-content"></div></div>
@@ -652,8 +644,10 @@ function sidePill(notes){
   return'';
 }
 function toSlug(str){return(str||'').toLowerCase().replace(/[#\/]/g,'').replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-');}
+function normalizeTown(t){return(t||'').replace(/,?\s*(Maine|New Hampshire|Massachusetts|ME|NH|MA)\.?\s*$/i,'').trim();}
+function isValidMls(m){return/^[A-Za-z0-9]{4,12}$/.test(m||'');}
 function statePrefix(office){const o=(office||'').toLowerCase().trim();if(['saco','biddeford','kennebunk'].includes(o))return'me';if(['andover','bradford','haverhill','methuen','newburyport'].includes(o))return'ma';return'nh';}
-function veraniUrl(d){const mls=(d.mls||'').trim().toUpperCase();if(!mls||mls==='NON-MLS')return null;return`https://www.verani.com/${statePrefix(d.office)}-real-estate/${toSlug(d.town)}/${toSlug(d.addr)}-mls-${mls.toLowerCase()}`;}
+function veraniUrl(d){const mls=(d.mls||'').trim().toUpperCase();if(!mls||mls==='NON-MLS'||!isValidMls(mls))return null;return`https://www.verani.com/${statePrefix(d.office)}-real-estate/${toSlug(normalizeTown(d.town))}/${toSlug(d.addr)}-mls-${mls.toLowerCase()}`;}
 
 function renderBuyerTable(buyerRows,appendTo){
   if(!buyerRows.length)return;
@@ -718,6 +712,7 @@ function renderDealSection(key,sect,appendTo){
   tbl.innerHTML=`<thead><tr><th>Agent</th><th>Address</th><th>Town</th><th>MLS #</th><th>List $</th>${isClosed?'<th>Sold $</th>':''}<th>Side</th><th>Date</th></tr></thead>`;
   const tbody=document.createElement('tbody');
   sect.deals.sort((a,b)=>{const da=new Date(a.date),db=new Date(b.date);const va=isNaN(da)?Infinity:da.getTime();const vb=isNaN(db)?Infinity:db.getTime();return va!==vb?va-vb:a.name.localeCompare(b.name);}).forEach(d=>{
+    d.town=normalizeTown(d.town);
     const url=veraniUrl(d);
     const mlsCell=url?`<a href="${url}" target="_blank" style="color:#185FA5;font-weight:500;text-decoration:none;font-size:11px">${d.mls} ↗</a>`:`<span style="color:#aaa9a2;font-size:11px">${d.mls||'—'}</span>`;
     const isBothSides=dealIsBoth(d);
@@ -804,6 +799,7 @@ function renderAgentListContent(el,agentMap,deals,regionId,regionColor,r,weekDea
   if(rbrs.length){stats.buyerAgency=rbrs.filter(br=>br.typeLabel==='agency').length;stats.showing=rbrs.filter(br=>br.typeLabel==='showing').length;stats.facilitator=rbrs.filter(br=>br.typeLabel==='facilitator').length;}
   const money=calcRegionMoney(deals,regionId);
   el.appendChild(renderRegionHeader(r,stats,money));
+  const wnbRegion=buildWeekNavBarElement();if(wnbRegion)el.appendChild(wnbRegion);
 
   // Weekly Activity collapsible
   const activityWrap=document.createElement('div');activityWrap.style.cssText=`margin-bottom:8px;border-radius:10px;border:1px solid #e2e0d8;overflow:hidden`;
@@ -978,6 +974,7 @@ function renderSummary(agentMap,deals,containerId){
     standings.appendChild(row);
   });
   el.appendChild(standings);
+  const wnbSummary=buildWeekNavBarElement();if(wnbSummary)el.appendChild(wnbSummary);
   // ── WEEKLY ACTIVITY with region filter pills (replaces Weekly Detail) ────
   const actWrapS=document.createElement('div');
   actWrapS.style.cssText='margin-bottom:8px;border-radius:10px;border:1px solid #e2e0d8;overflow:hidden';
@@ -1238,13 +1235,11 @@ function renderYTDStandingsForWeek(weekIdx){
   renderSummary(ytdRegAgents,allDeals,'ytd-sum-inner');
 }
 
-function renderWeekNavBar(){
-  const el=document.getElementById('week-nav-bar');if(!el)return;
+function buildWeekNavBarElement(){
   const ytd=loadYTD();
-  if(!ytd.weeks.length){el.style.display='none';return;}
-  el.style.display='block';el.innerHTML='';
+  if(!ytd.weeks.length)return null;
   const isLatest=_currentWeekIdx<0||_currentWeekIdx===ytd.weeks.length-1;
-  const bar=document.createElement('div');bar.style.cssText='display:flex;align-items:center;gap:8px;background:#EEEDFE;border:1px solid #CECBF6;border-radius:12px;padding:8px 14px;';
+  const bar=document.createElement('div');bar.style.cssText='display:flex;align-items:center;gap:8px;background:#EEEDFE;border:1px solid #CECBF6;border-radius:12px;padding:8px 14px;margin-bottom:12px;';
   const dot=document.createElement('div');dot.style.cssText='width:8px;height:8px;border-radius:50%;background:#534AB7;flex-shrink:0';bar.appendChild(dot);
   const lbl=document.createElement('span');lbl.style.cssText='font-size:12px;font-weight:500;color:#534AB7;white-space:nowrap;flex-shrink:0';lbl.textContent='Viewing week';bar.appendChild(lbl);
   const prevBtn=document.createElement('button');prevBtn.innerHTML='←';prevBtn.style.cssText='width:28px;height:28px;border-radius:50%;border:1px solid #CECBF6;background:#fff;font-size:13px;color:#534AB7;cursor:pointer;flex-shrink:0;transition:background .15s';
@@ -1258,26 +1253,25 @@ function renderWeekNavBar(){
   const nextBtn=document.createElement('button');nextBtn.innerHTML='→';nextBtn.style.cssText='width:28px;height:28px;border-radius:50%;border:1px solid #CECBF6;background:#fff;font-size:13px;color:#534AB7;cursor:pointer;flex-shrink:0;transition:background .15s';
   nextBtn.disabled=isLatest;nextBtn.style.opacity=nextBtn.disabled?'0.3':'1';bar.appendChild(nextBtn);
   if(!isLatest){const curBtn=document.createElement('button');curBtn.textContent='→ Current week';curBtn.style.cssText="font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;border:1px solid #534AB7;background:#534AB7;color:#fff;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:'DM Sans',sans-serif;transition:all .15s";curBtn.addEventListener('click',()=>goToWeek(ytd.weeks.length-1));bar.appendChild(curBtn);}
-  el.appendChild(bar);
-  function goToWeek(idx){
-    const y=loadYTD();if(idx<0||idx>=y.weeks.length)return;
-    _currentWeekIdx=idx;const w=y.weeks[idx];
-    window._currentWeekDeals=w.weekDeals||{};window._currentAgents=w.agents||{};window._currentBuyerRows=w.buyerRows||[];
-    updateStatsBar(w.agents||{},w.deals||[]);
-    renderSummary(w.agents||{},w.deals||[],'summary-content');
-    renderYTDStandingsForWeek(idx);
-    REGIONS.forEach(r=>renderAgentList(r.id+'-content',w.agents||{},w.deals||[],r.id,r.color));
-    document.getElementById('current-week-label').textContent='Week of '+w.label;
-    renderWeekNavBar();
-  }
   prevBtn.addEventListener('click',()=>goToWeek((_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1)-1));
   nextBtn.addEventListener('click',()=>goToWeek((_currentWeekIdx>=0?_currentWeekIdx:ytd.weeks.length-1)+1));
   sel.addEventListener('change',function(){goToWeek(parseInt(this.value));});
+  return bar;
+}
+function goToWeek(idx){
+  const y=loadYTD();if(idx<0||idx>=y.weeks.length)return;
+  _currentWeekIdx=idx;const w=y.weeks[idx];
+  window._currentWeekDeals=w.weekDeals||{};window._currentAgents=w.agents||{};window._currentBuyerRows=w.buyerRows||[];
+  updateStatsBar(w.agents||{},w.deals||[]);
+  renderSummary(w.agents||{},w.deals||[],'summary-content');
+  renderYTDStandingsForWeek(idx);
+  REGIONS.forEach(r=>renderAgentList(r.id+'-content',w.agents||{},w.deals||[],r.id,r.color));
+  document.getElementById('current-week-label').textContent='Week of '+w.label;
 }
 
 function renderAll(agentMap,deals,weekDeals){
   window._currentWeekDeals=weekDeals||{};window._currentAgents=agentMap||{};window._currentBuyerRows=window._currentBuyerRows||[];
-  updateStatsBar(agentMap,deals);renderWeekNavBar();
+  updateStatsBar(agentMap,deals);
   const existingBanner=document.querySelector('.detail-banner');if(existingBanner)existingBanner.remove();
   renderSummary(agentMap,deals,'summary-content');
   if(existingBanner){const summaryEl=document.getElementById('summary-content');const newBanner=summaryEl.querySelector('.detail-banner');if(newBanner)newBanner.replaceWith(existingBanner);else summaryEl.appendChild(existingBanner);}

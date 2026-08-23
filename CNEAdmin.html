@@ -670,6 +670,8 @@ function agentKey(name){return(name||'').toLowerCase().trim().replace(/\s+/g,' '
 function weeklyScore(a){return(a.closed||0)+(a.pend||0)+(a.newL||0)+(a.buyer||0);}
 function initials(name){const p=(name||'').trim().split(/\s+/);return p.length===1?p[0].substring(0,2).toUpperCase():(p[0][0]+p[p.length-1][0]).toUpperCase();}
 function parseMoney(str){if(!str)return 0;const n=parseFloat((str+'').replace(/\/month/gi,'').replace(/[$,\s]/g,''));return isNaN(n)?0:n;}
+function normalizeTown(t){return(t||'').replace(/,?\s*(Maine|New Hampshire|Massachusetts|ME|NH|MA)\.?\s*$/i,'').trim();}
+function isValidMlsEntry(v){const t=(v||'').trim().toUpperCase();if(!t||t==='NON-MLS')return true;return/^[A-Za-z0-9]{4,12}$/.test(t);}
 function fmtMoney(n){if(n>=1000000)return'$'+(n/1000000).toFixed(2)+'M';if(n>=1000)return'$'+Math.round(n/1000)+'K';return'$'+Math.round(n).toLocaleString();}
 function fmtDealDate(dateStr){const d=new Date(dateStr);if(isNaN(d))return'—';return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 function fmtDateOrRange(dates){const valid=(dates||[]).map(d=>new Date(d)).filter(d=>!isNaN(d));if(!valid.length)return'—';const f=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});valid.sort((a,b)=>a-b);const seen=new Set();const unique=[];valid.forEach(d=>{const lbl=f(d);if(!seen.has(lbl)){seen.add(lbl);unique.push(lbl);}});return unique.join(' / ');}
@@ -841,7 +843,8 @@ function parseTransactions(tsv,weekLabel){
     const status=(r['status']||'').toUpperCase().trim();const name=cleanAgentName(r['agent name']);
     if(!name||!status)return;
     if(isExcluded(name))return;
-    const mls=r['mls#']||r['mls']||'';
+    const mlsRaw=r['mls#']||r['mls']||'';
+    const mls=isValidMlsEntry(mlsRaw)?mlsRaw:'';
     const notes=((r['notes']||'')+' '+(r['timestamp']||'')).toLowerCase();
     const isBothSides=notes.includes('both sides');
     const m=(mls||'').trim().toUpperCase();
@@ -858,11 +861,11 @@ function parseTransactions(tsv,weekLabel){
         dk=mlsKey;
       }
     } else {
-      dk='NONMLS:'+agentKey(name)+':'+((r['address']||'').toLowerCase().trim())+':'+((r['town']||'').toLowerCase().trim())+':'+weekLabel;
+      dk='NONMLS:'+agentKey(name)+':'+((r['address']||'').toLowerCase().trim())+':'+(normalizeTown(r['town']||'').toLowerCase().trim())+':'+weekLabel;
     }
     const rank=STATUS_RANK[status]||0;
     if(!weekDeals[dk]||rank>(STATUS_RANK[weekDeals[dk].status]||0)){
-      weekDeals[dk]={status,name,office,mls:mls.trim(),addr:r['address']||'',town:r['town']||'',notes:notes,listP:parseMoney(r['list price']),soldP:parseMoney(r['sold price']),date:r['timestamp']||r['notes']||'',regionId:getRegionIdForAgent(name,office),dk,raw:{...r}};
+      weekDeals[dk]={status,name,office,mls:mls.trim(),addr:r['address']||'',town:normalizeTown(r['town']||''),notes:notes,listP:parseMoney(r['list price']),soldP:parseMoney(r['sold price']),date:r['timestamp']||r['notes']||'',regionId:getRegionIdForAgent(name,office),dk,raw:{...r}};
     }
   });
   pruneSupersededDeals(weekDeals);
@@ -1003,8 +1006,9 @@ function calcRegionMoney(deals,regionId){
 
 function sidePill(notes){const n=(notes||'').toLowerCase();if(n.includes('both sides'))return`<span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#E1F5EE;color:#0F6E56">Both</span>`;if(n.includes('list side'))return`<span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#E6F1FB;color:#185FA5">List</span>`;if(n.includes('buy side'))return`<span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:10px;background:#EEEDFE;color:#534AB7">Buy</span>`;return'';}
 function toSlug(str){return(str||'').toLowerCase().replace(/[#\/]/g,'').replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-');}
+function isValidMls(m){return/^[A-Za-z0-9]{4,12}$/.test(m||'');}
 function statePrefix(office){const o=(office||'').toLowerCase().trim();if(['saco','biddeford','kennebunk'].includes(o))return'me';if(['andover','bradford','haverhill','methuen','newburyport'].includes(o))return'ma';return'nh';}
-function veraniUrl(d){const mls=(d.mls||'').trim().toUpperCase();if(!mls||mls==='NON-MLS')return null;return`https://www.verani.com/${statePrefix(d.office)}-real-estate/${toSlug(d.town)}/${toSlug(d.addr)}-mls-${mls.toLowerCase()}`;}
+function veraniUrl(d){const mls=(d.mls||'').trim().toUpperCase();if(!mls||mls==='NON-MLS'||!isValidMls(mls))return null;return`https://www.verani.com/${statePrefix(d.office)}-real-estate/${toSlug(normalizeTown(d.town))}/${toSlug(d.addr)}-mls-${mls.toLowerCase()}`;}
 
 function renderBuyerTable(buyerRows,appendTo){
   if(!buyerRows.length)return;const wrap=document.createElement('div');wrap.style.marginBottom='14px';
